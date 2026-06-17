@@ -1,0 +1,13 @@
+{
+  "name": "mi-importa",
+  "version": "1.0.0",
+  "description": "Sistema de revenda MI Importa",
+  "main": "servidor.js",
+  "scripts": {
+    "start": "node servidor.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "multer": "^1.4.5-lts.1"
+  }
+}
