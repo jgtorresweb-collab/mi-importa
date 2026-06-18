@@ -503,10 +503,21 @@ function renderDashboard(){
   const months=Object.keys(byMonth).sort().slice(-6);
   const mLabels=months.map(m=>{ const[y,mo]=m.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(mo)-1]+'/'+y.slice(2); });
   if(chartVendas) chartVendas.destroy();
+  const semVendas=months.length===0||months.every(m=>!byMonth[m]);
   chartVendas=new Chart(document.getElementById('chart-vendas'),{
     type:'bar',
-    data:{labels:mLabels,datasets:[{label:'Receita',data:months.map(m=>byMonth[m]||0),backgroundColor:'rgba(200,240,58,.7)',borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'R$'+v.toLocaleString('pt-BR')},grid:{color:'#222'}},x:{grid:{display:false}}}}
+    data:{
+      labels:semVendas?['Sem vendas ainda']:mLabels,
+      datasets:[{label:'Receita',data:semVendas?[0]:months.map(m=>byMonth[m]||0),backgroundColor:'rgba(184,134,11,.6)',borderRadius:6}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{min:0,suggestedMax:semVendas?100:undefined,ticks:{callback:v=>v===0?'R$ 0':'R$'+v.toLocaleString('pt-BR')},grid:{color:'#222'}},
+        x:{grid:{display:false},ticks:{color:'#888'}}
+      }
+    }
   });
 
   // Gráfico por categoria
@@ -515,10 +526,20 @@ function renderDashboard(){
   const catLabels=Object.keys(byCat), catVals=catLabels.map(c=>byCat[c]);
   const colors=['rgba(200,240,58,.8)','rgba(96,170,255,.8)','rgba(245,166,35,.8)','rgba(77,222,128,.8)','rgba(255,90,90,.8)','rgba(180,120,255,.8)'];
   if(chartCats) chartCats.destroy();
+  const semCats=catLabels.length===0;
   chartCats=new Chart(document.getElementById('chart-categorias'),{
     type:'doughnut',
-    data:{labels:catLabels,datasets:[{data:catVals,backgroundColor:colors}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#aaa',font:{size:11}}}}}
+    data:{
+      labels:semCats?['Sem vendas ainda']:catLabels,
+      datasets:[{data:semCats?[1]:catVals,backgroundColor:semCats?['#2a2a2a']:colors}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'right',labels:{color:semCats?'#444':'#aaa',font:{size:11}}},
+        tooltip:{enabled:!semCats}
+      }
+    }
   });
 
   // Últimas vendas
@@ -567,6 +588,27 @@ function renderProdutos(){
     const matchS=!st||(st==='vendido'&&sold)||(st==='disponivel'&&!sold);
     return matchQ&&matchS&&(!cat||p.categoria===cat);
   });
+  // Aplicar ordenação
+  if(sortProdCol.col){
+    list.sort((a,b)=>{
+      let av,bv;
+      if(sortProdCol.col==='status'){ av=isSoldOut(a)?1:0; bv=isSoldOut(b)?1:0; }
+      else if(sortProdCol.col==='importador'){ av=impName(a.importador)||''; bv=impName(b.importador)||''; }
+      else if(sortProdCol.col==='lucroPct'){ av=parseFloat(lucroPercent(a))||0; bv=parseFloat(lucroPercent(b))||0; }
+      else if(sortProdCol.col==='custo'){
+        av=a.moeda!=='BRL'?(a.custo*(a.cambio||1)):a.custo;
+        bv=b.moeda!=='BRL'?(b.custo*(b.cambio||1)):b.custo;
+      }
+      else{ av=a[sortProdCol.col]||''; bv=b[sortProdCol.col]||''; }
+      if(typeof av==='string') return av.localeCompare(bv)*sortProdCol.dir;
+      return (av-bv)*sortProdCol.dir;
+    });
+  }
+  // Atualizar ícones de ordenação
+  ['nome','importador','custo','preco','lucroPct','qtd','status'].forEach(col=>{
+    const el=document.getElementById('sp-'+col);
+    if(el) el.textContent=sortProdCol.col===col?(sortProdCol.dir===1?'↑':'↓'):'↕';
+  });
   const tbody=document.getElementById('prod-tbody');
   if(!list.length){ tbody.innerHTML='<tr><td colspan="10"><div class="empty"><div class="empty-icon">📦</div><p>Nenhum produto encontrado.</p></div></td></tr>'; return; }
   tbody.innerHTML=list.map(p=>{
@@ -578,7 +620,7 @@ function renderProdutos(){
       <td>${thumb}</td>
       <td><div style="font-weight:600">${p.nome}</div><div style="font-size:11px;color:var(--mu)">${[p.marca,p.modelo,p.cor].filter(Boolean).join(' · ')}</div></td>
       <td style="font-size:12px">${impName(p.importador)}</td>
-      <td>${fmtBRL(p.custo)}${p.moeda!=='BRL'?` <span style="font-size:10px;color:var(--mu)">${p.moeda}</span>`:''}</td>
+      <td>${(()=>{ const custoReal=p.moeda!=='BRL'?(p.custo*(p.cambio||1)):p.custo; if(p.moeda!=='BRL') return `<span style="font-size:12px">${p.moeda} ${Number(p.custo).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span><br><span style="font-size:11px;color:var(--mu)">${fmtBRL(custoReal)}</span>`; return fmtBRL(p.custo); })()}</td>
       <td style="font-weight:700;color:var(--ac)">${fmtBRL(p.preco)}</td>
       <td><span class="chip ${lp>=30?'chip-ok':lp>=10?'chip-warn':'chip-danger'}">${lp}%</span></td>
       <td>${p.qtd||1}</td>
@@ -990,6 +1032,12 @@ let sortCol={col:null,dir:1};
 function sortTable(col){
   if(sortCol.col===col) sortCol.dir*=-1; else{ sortCol.col=col; sortCol.dir=1; }
   renderDashboard();
+}
+
+let sortProdCol={col:null,dir:1};
+function sortProd(col){
+  if(sortProdCol.col===col) sortProdCol.dir*=-1; else{ sortProdCol.col=col; sortProdCol.dir=1; }
+  renderProdutos();
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
