@@ -206,21 +206,40 @@ textarea{resize:vertical;min-height:70px;}
 
     <!-- PRODUTOS -->
     <div id="view-produtos" class="view">
-      <div class="filters">
-        <input type="text" id="prod-search" placeholder="Buscar produto..." oninput="renderProdutos()">
-        <select id="prod-cat" onchange="renderProdutos()"><option value="">Todas as categorias</option></select>
-        <select id="prod-status" onchange="renderProdutos()">
-          <option value="">Todos</option><option value="disponivel">Disponível</option><option value="vendido">Vendido</option>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+        <input type="text" id="prod-search" placeholder="🔍 Buscar produto..." oninput="renderProdutos()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:200px">
+        <select id="prod-importador" onchange="renderProdutos()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:180px">
+          <option value="">Todos os importadores</option>
         </select>
-        <div style="display:flex;gap:8px">
-        <button class="btn btn-sec btn-sm" onclick="imprimirProdutos()">🖨️ Imprimir</button>
-        <button class="btn" onclick="openProdutoModal()">+ Novo produto</button>
-      </div>
+        <select id="prod-cat" onchange="renderProdutos()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
+          <option value="">Todas as categorias</option>
+        </select>
+        <select id="prod-status" onchange="renderProdutos()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:130px">
+          <option value="">Todos</option>
+          <option value="disponivel">Disponível</option>
+          <option value="vendido">Vendido</option>
+        </select>
+        <button onclick="limparFiltrosProd()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-sec btn-sm" onclick="imprimirProdutos()">🖨️ Imprimir</button>
+          <button class="btn" onclick="openProdutoModal()">+ Novo produto</button>
+        </div>
       </div>
       <div class="card">
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Foto</th><th>Produto</th><th>Importador</th><th>Custo</th><th>Preço</th><th>Lucro %</th><th>Qtd</th><th>Tipo</th><th>Status</th><th></th></tr></thead>
+            <thead><tr>
+              <th>Foto</th>
+              <th onclick="sortProd('nome')" style="cursor:pointer;white-space:nowrap">Produto <span id="sp-nome">↕</span></th>
+              <th onclick="sortProd('importador')" style="cursor:pointer;white-space:nowrap">Importador <span id="sp-importador">↕</span></th>
+              <th onclick="sortProd('custo')" style="cursor:pointer;white-space:nowrap">Custo <span id="sp-custo">↕</span></th>
+              <th onclick="sortProd('preco')" style="cursor:pointer;white-space:nowrap">Preço venda <span id="sp-preco">↕</span></th>
+              <th onclick="sortProd('lucroPct')" style="cursor:pointer;white-space:nowrap">Lucro % <span id="sp-lucroPct">↕</span></th>
+              <th onclick="sortProd('qtd')" style="cursor:pointer;white-space:nowrap">Qtd <span id="sp-qtd">↕</span></th>
+              <th onclick="sortProd('tipo')" style="cursor:pointer;white-space:nowrap">Tipo <span id="sp-tipo">↕</span></th>
+              <th onclick="sortProd('status')" style="cursor:pointer;white-space:nowrap">Status <span id="sp-status">↕</span></th>
+              <th></th>
+            </tr></thead>
             <tbody id="prod-tbody"></tbody>
           </table>
         </div>
@@ -617,19 +636,40 @@ function renderDashboard(){
 
 
 // ── PRODUTOS ──────────────────────────────────────────────────────────────────
+function limparFiltrosProd(){
+  document.getElementById('prod-search').value='';
+  document.getElementById('prod-importador').value='';
+  document.getElementById('prod-cat').value='';
+  document.getElementById('prod-status').value='';
+  renderProdutos();
+}
+
 function renderProdutos(){
+  // Popular filtro de importadores
+  const impSelP=document.getElementById('prod-importador');
+  const curImpP=impSelP.value;
+  impSelP.innerHTML='<option value="">Todos os importadores</option>'+importers.map(i=>`<option value="${i.id}"${i.id===curImpP?' selected':''}>${i.nome}</option>`).join('');
+
+  // Popular filtro de categorias
+  const cats=[...new Set(products.map(p=>p.categoria).filter(Boolean))].sort();
+  const catSel=document.getElementById('prod-cat');
+  const curCat=catSel.value;
+  catSel.innerHTML='<option value="">Todas as categorias</option>'+cats.map(cat=>`<option value="${cat}"${cat===curCat?' selected':''}>${cat}</option>`).join('');
+
   const q=document.getElementById('prod-search').value.toLowerCase();
+  const filtImpP=document.getElementById('prod-importador').value;
   const cat=document.getElementById('prod-cat').value;
   const st=document.getElementById('prod-status').value;
-  const cats=[...new Set(products.map(p=>p.categoria).filter(Boolean))];
-  const sel=document.getElementById('prod-cat'), cur=sel.value;
-  sel.innerHTML='<option value="">Todas as categorias</option>'+cats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+
   let list=products.filter(p=>{
-    const matchQ=!q||p.nome.toLowerCase().includes(q)||(p.marca||'').toLowerCase().includes(q);
+    const matchQ=!q||p.nome.toLowerCase().includes(q)||(p.marca||'').toLowerCase().includes(q)||(p.categoria||'').toLowerCase().includes(q);
     const sold=isSoldOut(p);
     const matchS=!st||(st==='vendido'&&sold)||(st==='disponivel'&&!sold);
-    return matchQ&&matchS&&(!cat||p.categoria===cat);
+    const matchImp=!filtImpP||p.importador===filtImpP;
+    const matchCat=!cat||p.categoria===cat;
+    return matchQ&&matchS&&matchImp&&matchCat;
   });
+
   // Aplicar ordenação
   if(sortProdCol.col){
     list.sort((a,b)=>{
@@ -646,8 +686,9 @@ function renderProdutos(){
       return (av-bv)*sortProdCol.dir;
     });
   }
+
   // Atualizar ícones de ordenação
-  ['nome','importador','custo','preco','lucroPct','qtd','status'].forEach(col=>{
+  ['nome','importador','custo','preco','lucroPct','qtd','tipo','status'].forEach(col=>{
     const el=document.getElementById('sp-'+col);
     if(el) el.textContent=sortProdCol.col===col?(sortProdCol.dir===1?'↑':'↓'):'↕';
   });
