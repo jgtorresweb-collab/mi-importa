@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MI Importa · Painel Admin</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MI Admin">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="apple-touch-icon" href="/logo.png">
+<link rel="manifest" href="/manifest-admin.json">
 <style>
 :root{--bg:#0a0a0a;--s1:#141414;--s2:#1e1e1e;--s3:#282828;--b:#333;--ac:#c8f03a;--ac2:#a8cc28;--tx:#f0f0f0;--mu:#777;--danger:#ff5a5a;--warn:#f5a623;--ok:#4cde80;--info:#60aaff;--r:10px;--font:'Segoe UI',system-ui,sans-serif;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -85,7 +91,8 @@ textarea{resize:vertical;min-height:70px;}
 .foto-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px;}
 .foto-item{position:relative;aspect-ratio:1;background:var(--s2);border-radius:8px;overflow:hidden;border:1px solid var(--b);}
 .foto-item img{width:100%;height:100%;object-fit:cover;}
-.foto-item.principal::after{content:'CAPA';position:absolute;bottom:0;left:0;right:0;background:rgba(200,240,58,.9);color:#000;font-size:9px;font-weight:700;text-align:center;padding:2px;}
+.foto-item.principal::after{content:'⭐ CAPA';position:absolute;bottom:0;left:0;right:0;background:rgba(184,134,11,.92);color:#fff;font-size:9px;font-weight:700;text-align:center;padding:2px;}
+.foto-item:not(.principal):hover::after{content:'Definir capa';position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:700;text-align:center;padding:2px;}
 .foto-remove{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.75);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;}
 .foto-add{display:flex;align-items:center;justify-content:center;aspect-ratio:1;background:var(--s2);border-radius:8px;border:2px dashed var(--b);cursor:pointer;color:var(--mu);font-size:22px;transition:all .15s;}
 .foto-add:hover{border-color:var(--ac);color:var(--ac);}
@@ -191,7 +198,10 @@ textarea{resize:vertical;min-height:70px;}
         <select id="prod-status" onchange="renderProdutos()">
           <option value="">Todos</option><option value="disponivel">Disponível</option><option value="vendido">Vendido</option>
         </select>
+        <div style="display:flex;gap:8px">
+        <button class="btn btn-sec btn-sm" onclick="imprimirProdutos()">🖨️ Imprimir</button>
         <button class="btn" onclick="openProdutoModal()">+ Novo produto</button>
+      </div>
       </div>
       <div class="card">
         <div class="tbl-wrap">
@@ -328,9 +338,10 @@ textarea{resize:vertical;min-height:70px;}
       <div class="field" id="fc-cambio" style="display:none"><label>Câmbio na data de aquisição</label><input type="number" id="p-cambio" step="0.01" oninput="calcPreco()"></div>
       <div class="field"><label>Data de aquisição</label><input type="date" id="p-data"></div>
       <div class="field"><label>% lucro projetado</label><input type="number" id="p-lucro" step="0.1" oninput="calcPreco()"><span class="input-hint">Preencha para calcular o preço automaticamente</span></div>
-      <div class="field"><label>Preço de venda (R$) *</label><input type="number" id="p-preco" step="0.01"></div>
+      <div class="field"><label>Preço de venda (R$) *</label><input type="number" id="p-preco" step="0.01" oninput="calcPct()"></div>
+      <input type="hidden" id="p-capa-idx" value="0">
       <div class="field full">
-        <label>Fotos do produto (até 10) — 1ª foto é a capa</label>
+        <label>Fotos do produto (até 10) — clique na foto para definir a capa ⭐</label>
         <div id="foto-grid" class="foto-grid"></div>
         <input type="file" id="p-foto-file" accept="image/*" multiple style="display:none" onchange="uploadFotos(this)">
         <div id="foto-status" style="font-size:12px;color:var(--mu);margin-top:6px"></div>
@@ -397,7 +408,8 @@ const fmtDate=d=>{ if(!d) return '—'; const[y,m,day]=d.split('-'); return `${d
 const today=()=>new Date().toISOString().slice(0,10);
 const addMonths=(s,n)=>{ const d=new Date(s+'T12:00:00'); d.setMonth(d.getMonth()+n); return d.toISOString().slice(0,10); };
 const isOverdue=d=>d<today();
-const isSoldOut=p=>sales.filter(s=>s.productId===p.id).length>=(p.qtd||1);
+const isSoldOut=p=>{ const vendido=sales.filter(s=>s.productId===p.id).reduce((a,s)=>a+(s.qty||1),0); return vendido>=(p.qtd||1); };
+const estoqueDisp=p=>Math.max(0,(p.qtd||1)-sales.filter(s=>s.productId===p.id).reduce((a,s)=>a+(s.qty||1),0));
 const spinner=on=>document.getElementById('spinner').classList.toggle('hidden',!on);
 function toast(msg,err=false){
   const el=document.getElementById('toast');
@@ -511,7 +523,20 @@ function renderDashboard(){
 
   // Últimas vendas
   const tbody=document.getElementById('dash-vendas');
-  const recentes=[...sales].sort((a,b)=>b.date?.localeCompare(a.date)).slice(0,8);
+  let recentes=[...sales];
+  if(sortCol.col){
+    recentes.sort((a,b)=>{
+      let av=a[sortCol.col]||'', bv=b[sortCol.col]||'';
+      if(typeof av==='number'||!isNaN(parseFloat(av))){ av=parseFloat(av)||0; bv=parseFloat(bv)||0; }
+      return av>bv?sortCol.dir:av<bv?-sortCol.dir:0;
+    });
+  } else { recentes.sort((a,b)=>b.date?.localeCompare(a.date)); }
+  recentes=recentes.slice(0,15);
+  // atualiza ícones
+  ['productName','comprador','productPreco','date'].forEach(col=>{
+    const el=document.getElementById('sort-'+col);
+    if(el) el.textContent=sortCol.col===col?(sortCol.dir===1?'↑':'↓'):'↕';
+  });
   if(!recentes.length){ tbody.innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">🧾</div><p>Nenhuma venda ainda.</p></div></td></tr>'; return; }
   tbody.innerHTML=recentes.map(s=>{
     const st=saleStatus(s);
@@ -546,7 +571,8 @@ function renderProdutos(){
   if(!list.length){ tbody.innerHTML='<tr><td colspan="10"><div class="empty"><div class="empty-icon">📦</div><p>Nenhum produto encontrado.</p></div></td></tr>'; return; }
   tbody.innerHTML=list.map(p=>{
     const sold=isSoldOut(p);
-    const thumb=p.fotos?.[0]?`<img src="${p.fotos[0]}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;${sold?'filter:grayscale(1)':''}" onerror="this.style.display='none'">`:'—';
+    const capaIdx=p.capaIdx||0; const capaFoto=(p.fotos||[])[capaIdx]||(p.fotos||[])[0]||'';
+    const thumb=capaFoto?`<img src="${capaFoto}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;${sold?'filter:grayscale(1)':''}" onerror="this.style.display='none'">`:'—';
     const lp=lucroPercent(p);
     return `<tr>
       <td>${thumb}</td>
@@ -592,6 +618,7 @@ function openProdutoModal(id){
   impSel.innerHTML='<option value="">— Sem importador —</option>'+importers.map(i=>`<option value="${i.id}"${p?.importador===i.id?' selected':''}>${i.nome}</option>`).join('');
   // fotos
   fotosAtuais=[...(p?.fotos||[])];
+  document.getElementById('p-capa-idx').value=p?.capaIdx||0;
   document.getElementById('foto-status').textContent='';
   document.getElementById('p-foto-file').value='';
   // cats datalist
@@ -614,8 +641,10 @@ function calcPreco(){
 async function saveProduto(){
   const nome=document.getElementById('p-nome').value.trim();
   const preco=parseFloat(document.getElementById('p-preco').value);
+  const importador=document.getElementById('p-importador').value;
   if(!nome){ toast('Informe o nome do produto',true); return; }
   if(!preco){ toast('Informe o preço de venda',true); return; }
+  if(!importador){ toast('Selecione um importador — campo obrigatório!',true); return; }
   const data={
     nome,preco,
     modelo:document.getElementById('p-modelo').value.trim(),
@@ -634,6 +663,7 @@ async function saveProduto(){
     lucroPct:parseFloat(document.getElementById('p-lucro').value)||0,
     obs:document.getElementById('p-obs').value.trim(),
     fotos:fotosAtuais,
+    capaIdx:parseInt(document.getElementById('p-capa-idx').value)||0,
   };
   spinner(true);
   try{
@@ -661,12 +691,14 @@ async function deleteProduto(id){
 // ── UPLOAD FOTOS ──────────────────────────────────────────────────────────────
 function renderFotoGrid(){
   const grid=document.getElementById('foto-grid');
+  const capaIdx=parseInt(document.getElementById('p-capa-idx')?.value||'0');
   grid.innerHTML=fotosAtuais.map((url,i)=>`
-    <div class="foto-item${i===0?' principal':''}">
-      <img src="${url}" onerror="this.style.display='none'">
-      <button class="foto-remove" onclick="removeFoto(${i})">×</button>
+    <div class="foto-item${i===capaIdx?' principal':''}" title="${i===capaIdx?'Capa':'Clique para definir como capa'}" onclick="setCapa(${i})" style="cursor:pointer">
+      <img src="${url}" onerror="this.style.display=\'none\'">
+      <button class="foto-remove" onclick="event.stopPropagation();removeFoto(${i})">×</button>
     </div>`).join('')+(fotosAtuais.length<10?`<div class="foto-add" onclick="document.getElementById('p-foto-file').click()">+</div>`:'');
 }
+window.setCapa=function(i){ document.getElementById('p-capa-idx').value=i; renderFotoGrid(); toast('Foto '+(i+1)+' definida como capa!'); }
 function removeFoto(i){ fotosAtuais.splice(i,1); renderFotoGrid(); }
 async function uploadFotos(input){
   const files=[...input.files].slice(0,10-fotosAtuais.length);
@@ -912,6 +944,52 @@ function renderEncalhados(){
       <td><span class="chip ${dias>60?'chip-danger':'chip-warn'}">${dias} dias</span></td>
     </tr>`;
   }).join('');
+}
+
+// ── IMPRIMIR PRODUTOS ─────────────────────────────────────────────────────────
+function imprimirProdutos(){
+  const rows=products.map(p=>{
+    const sold=isSoldOut(p);
+    const capaIdx=p.capaIdx||0;
+    const capa=(p.fotos||[])[capaIdx]||(p.fotos||[])[0]||'';
+    const custoReal=p.moeda!=='BRL'?(p.custo*(p.cambio||1)):p.custo;
+    const lp=custoReal?((p.preco-custoReal)/custoReal*100).toFixed(1):0;
+    const lucroR=p.preco-custoReal;
+    const disp=Math.max(0,(p.qtd||1)-sales.filter(s=>s.productId===p.id).reduce((a,s)=>a+(s.qty||1),0));
+    return `<tr>
+      <td>${capa?`<img src="${capa}" style="width:50px;height:50px;object-fit:cover;border-radius:4px">`:'—'}</td>
+      <td><strong>${p.nome}</strong><br><small>${[p.marca,p.modelo,p.cor].filter(Boolean).join(' · ')}</small></td>
+      <td>${impName(p.importador)}</td>
+      <td>R$ ${Number(custoReal).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+      <td><strong>R$ ${Number(p.preco).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></td>
+      <td>R$ ${Number(lucroR).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+      <td>${lp}%</td>
+      <td>${disp}</td>
+    </tr>`;
+  }).join('');
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Produtos MI Importa</title>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px;}
+  h1{font-size:18px;margin-bottom:4px;}p{font-size:11px;color:#666;margin-bottom:16px;}
+  table{width:100%;border-collapse:collapse;}
+  th{background:#1a1a1a;color:#ffd700;padding:8px;text-align:left;font-size:11px;}
+  td{padding:7px 8px;border-bottom:1px solid #eee;vertical-align:middle;}
+  tr:nth-child(even) td{background:#f9f9f9;}
+  @media print{button{display:none!important;}}
+  </style></head><body>
+  <h1>🏷 MI Importa — Lista de Produtos</h1>
+  <p>Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+  <button onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;background:#b8860b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
+  <table><thead><tr><th>Foto</th><th>Produto</th><th>Importador</th><th>Custo</th><th>Preço venda</th><th>R$ Lucro</th><th>% Lucro</th><th>Qtd disponível</th></tr></thead>
+  <tbody>${rows}</tbody></table></body></html>`);
+  win.document.close();
+}
+
+// ── ORDENAÇÃO DAS COLUNAS ──────────────────────────────────────────────────────
+let sortCol={col:null,dir:1};
+function sortTable(col){
+  if(sortCol.col===col) sortCol.dir*=-1; else{ sortCol.col=col; sortCol.dir=1; }
+  renderDashboard();
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
