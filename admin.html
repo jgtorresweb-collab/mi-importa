@@ -487,16 +487,22 @@ function renderDashboard(){
   },0);
 
   // R$ em estoque = preço × qtd disponível de cada produto
-  const valorEstoque = products.reduce((acc,p)=>{
+  const valorEstoqueVenda = products.reduce((acc,p)=>{
     const disp = estoqueDisp(p);
     return acc + (p.preco * disp);
+  }, 0);
+  const valorEstoqueCusto = products.reduce((acc,p)=>{
+    const disp = estoqueDisp(p);
+    const custoReal = p.moeda!=='BRL' ? (p.custo*(p.cambio||1)) : p.custo;
+    return acc + (custoReal * disp);
   }, 0);
   const qtdEstoque = products.reduce((acc,p)=>acc+estoqueDisp(p), 0);
 
   document.getElementById('stat-grid').innerHTML=`
     <div class="stat"><div class="stat-label">Faturamento total</div><div class="stat-val">${fmtBRL(fat)}</div><div class="stat-sub">${sales.length} vendas</div></div>
     <div class="stat"><div class="stat-label">Lucro estimado</div><div class="stat-val">${fmtBRL(lucro)}</div><div class="stat-sub">margem: ${fat?((lucro/fat)*100).toFixed(1):0}%</div></div>
-    <div class="stat info"><div class="stat-label">R$ em estoque</div><div class="stat-val" style="font-size:20px">${fmtBRL(valorEstoque)}</div><div class="stat-sub">${qtdEstoque} unidade${qtdEstoque!==1?'s':''} disponíve${qtdEstoque!==1?'is':'l'}</div></div>
+    <div class="stat info"><div class="stat-label">Estoque · valor venda</div><div class="stat-val" style="font-size:20px">${fmtBRL(valorEstoqueVenda)}</div><div class="stat-sub">${qtdEstoque} unidade${qtdEstoque!==1?'s':''} disponíve${qtdEstoque!==1?'is':'l'}</div></div>
+    <div class="stat info"><div class="stat-label">Estoque · valor custo</div><div class="stat-val" style="font-size:20px">${fmtBRL(valorEstoqueCusto)}</div><div class="stat-sub">capital investido em estoque</div></div>
     <div class="stat info"><div class="stat-label">Ticket médio</div><div class="stat-val">${fmtBRL(ticket)}</div></div>
     <div class="stat warn"><div class="stat-label">Comissões pagas</div><div class="stat-val">${fmtBRL(comissoes)}</div></div>
     <div class="stat danger"><div class="stat-label">Parcelas vencidas</div><div class="stat-val">${pv}</div></div>
