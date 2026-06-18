@@ -485,38 +485,79 @@ function refreshView(name){
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function popularFiltrosDash(){
+  if(!document.getElementById('dash-importador')) return;
+  const curImp=document.getElementById('dash-importador').value;
+  const curCat=document.getElementById('dash-categoria').value;
+  const curProd=document.getElementById('dash-produto').value;
+  document.getElementById('dash-importador').innerHTML='<option value="">Todos os importadores</option>'+importers.map(i=>`<option value="${i.id}"${i.id===curImp?' selected':''}>${i.nome}</option>`).join('');
+  const cats=[...new Set(products.map(p=>p.categoria).filter(Boolean))].sort();
+  document.getElementById('dash-categoria').innerHTML='<option value="">Todas as categorias</option>'+cats.map(cat=>`<option value="${cat}"${cat===curCat?' selected':''}>${cat}</option>`).join('');
+  const filtImp=document.getElementById('dash-importador').value;
+  const filtCat=document.getElementById('dash-categoria').value;
+  const prods=products.filter(p=>(!filtImp||p.importador===filtImp)&&(!filtCat||p.categoria===filtCat));
+  document.getElementById('dash-produto').innerHTML='<option value="">Todos os produtos</option>'+prods.map(p=>`<option value="${p.id}"${p.id===curProd?' selected':''}>${p.nome}</option>`).join('');
+}
+function aplicarFiltrosDash(){ renderDashboard(); }
+function limparFiltrosDash(){
+  document.getElementById('dash-importador').value='';
+  document.getElementById('dash-categoria').value='';
+  document.getElementById('dash-produto').value='';
+  renderDashboard();
+}
+
 function renderDashboard(){
-  const fat=sales.reduce((s,v)=>s+(v.productPreco||0),0);
-  const lucro=sales.reduce((acc,s)=>{
+  popularFiltrosDash();
+
+  const filtImp=document.getElementById('dash-importador')?.value||'';
+  const filtCat=document.getElementById('dash-categoria')?.value||'';
+  const filtProd=document.getElementById('dash-produto')?.value||'';
+
+  // Label
+  const filtros=[];
+  if(filtImp){const i=importers.find(x=>x.id===filtImp);if(i)filtros.push(i.nome);}
+  if(filtCat) filtros.push(filtCat);
+  if(filtProd){const p=products.find(x=>x.id===filtProd);if(p)filtros.push(p.nome);}
+  const lbl=document.getElementById('dash-filtro-label');
+  if(lbl) lbl.textContent=filtros.length?`Filtrando por: ${filtros.join(' › ')}`:'';
+
+  // Filtrar produtos e vendas
+  const prodsFiltrados=products.filter(p=>{
+    if(filtImp && p.importador!==filtImp) return false;
+    if(filtCat && p.categoria!==filtCat) return false;
+    if(filtProd && p.id!==filtProd) return false;
+    return true;
+  });
+  const idsFilt=new Set(prodsFiltrados.map(p=>p.id));
+  const salesFiltradas=sales.filter(s=>idsFilt.has(s.productId));
+
+  const fat=salesFiltradas.reduce((s,v)=>s+(v.productPreco||0),0);
+  const lucro=salesFiltradas.reduce((acc,s)=>{
     const p=products.find(x=>x.id===s.productId); if(!p) return acc;
     return acc+lucroReal(p);
   },0);
-  const pv=sales.flatMap(s=>(s.installments||[]).filter(i=>!i.pago&&isOverdue(i.vencimento))).length;
+  const pv=salesFiltradas.flatMap(s=>(s.installments||[]).filter(i=>!i.pago&&isOverdue(i.vencimento))).length;
   const d30=new Date(); d30.setDate(d30.getDate()-30);
-  const enc=products.filter(p=>!isSoldOut(p)&&new Date(p.createdAt+'T12:00:00')<=d30);
-  const ticket=sales.length?fat/sales.length:0;
-  const comissoes=sales.reduce((acc,s)=>{
+  const enc=prodsFiltrados.filter(p=>!isSoldOut(p)&&new Date((p.createdAt||'2000-01-01')+'T12:00:00')<=d30);
+  const ticket=salesFiltradas.length?fat/salesFiltradas.length:0;
+  const comissoes=salesFiltradas.reduce((acc,s)=>{
     const p=products.find(x=>x.id===s.productId);
     return acc+(p?.tipo==='afiliado'?(s.productPreco*(p.comissao||0)/100):0);
   },0);
 
-  // R$ em estoque = preço × qtd disponível de cada produto (filtrado)
-  const valorEstoqueVenda = prodsFiltrados.reduce((acc,p)=>{
-    const disp = estoqueDisp(p);
-    return acc + (p.preco * disp);
-  }, 0);
-  const valorEstoqueCusto = prodsFiltrados.reduce((acc,p)=>{
-    const disp = estoqueDisp(p);
-    const custoReal = p.moeda!=='BRL' ? (p.custo*(p.cambio||1)) : p.custo;
-    return acc + (custoReal * disp);
-  }, 0);
-  const qtdEstoque = prodsFiltrados.reduce((acc,p)=>acc+estoqueDisp(p), 0);
+  // Estoque
+  const valorEstoqueVenda=prodsFiltrados.reduce((acc,p)=>acc+(p.preco*estoqueDisp(p)),0);
+  const valorEstoqueCusto=prodsFiltrados.reduce((acc,p)=>{
+    const cr=p.moeda!=='BRL'?(p.custo*(p.cambio||1)):p.custo;
+    return acc+(cr*estoqueDisp(p));
+  },0);
+  const qtdEstoque=prodsFiltrados.reduce((acc,p)=>acc+estoqueDisp(p),0);
 
   document.getElementById('stat-grid').innerHTML=`
-    <div class="stat"><div class="stat-label">Faturamento total</div><div class="stat-val">${fmtBRL(fat)}</div><div class="stat-sub">${sales.length} vendas</div></div>
+    <div class="stat"><div class="stat-label">Faturamento total</div><div class="stat-val">${fmtBRL(fat)}</div><div class="stat-sub">${salesFiltradas.length} vendas</div></div>
     <div class="stat"><div class="stat-label">Lucro estimado</div><div class="stat-val">${fmtBRL(lucro)}</div><div class="stat-sub">margem: ${fat?((lucro/fat)*100).toFixed(1):0}%</div></div>
-    <div class="stat info"><div class="stat-label">Estoque · valor venda</div><div class="stat-val" style="font-size:20px">${fmtBRL(valorEstoqueVenda)}</div><div class="stat-sub">${qtdEstoque} unidade${qtdEstoque!==1?'s':''} disponíve${qtdEstoque!==1?'is':'l'}</div></div>
-    <div class="stat info"><div class="stat-label">Estoque · valor custo</div><div class="stat-val" style="font-size:20px">${fmtBRL(valorEstoqueCusto)}</div><div class="stat-sub">capital investido em estoque</div></div>
+    <div class="stat info"><div class="stat-label">Estoque · valor venda</div><div class="stat-val" style="font-size:19px">${fmtBRL(valorEstoqueVenda)}</div><div class="stat-sub">${qtdEstoque} unidade${qtdEstoque!==1?'s':''} disponíve${qtdEstoque!==1?'is':'l'}</div></div>
+    <div class="stat info"><div class="stat-label">Estoque · valor custo</div><div class="stat-val" style="font-size:19px">${fmtBRL(valorEstoqueCusto)}</div><div class="stat-sub">capital investido em estoque</div></div>
     <div class="stat info"><div class="stat-label">Ticket médio</div><div class="stat-val">${fmtBRL(ticket)}</div></div>
     <div class="stat warn"><div class="stat-label">Comissões pagas</div><div class="stat-val">${fmtBRL(comissoes)}</div></div>
     <div class="stat danger"><div class="stat-label">Parcelas vencidas</div><div class="stat-val">${pv}</div></div>
@@ -531,61 +572,42 @@ function renderDashboard(){
   const months=Object.keys(byMonth).sort().slice(-6);
   const mLabels=months.map(m=>{ const[y,mo]=m.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(mo)-1]+'/'+y.slice(2); });
   if(chartVendas) chartVendas.destroy();
-  const semVendas=months.length===0||months.every(m=>!byMonth[m]);
+  const semVendas=months.length===0;
   chartVendas=new Chart(document.getElementById('chart-vendas'),{
     type:'bar',
-    data:{
-      labels:semVendas?['Sem vendas ainda']:mLabels,
-      datasets:[{label:'Receita',data:semVendas?[0]:months.map(m=>byMonth[m]||0),backgroundColor:'rgba(184,134,11,.6)',borderRadius:6}]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        y:{min:0,suggestedMax:semVendas?100:undefined,ticks:{callback:v=>v===0?'R$ 0':'R$'+v.toLocaleString('pt-BR')},grid:{color:'#222'}},
-        x:{grid:{display:false},ticks:{color:'#888'}}
-      }
-    }
+    data:{labels:semVendas?['Sem vendas ainda']:mLabels,datasets:[{label:'Receita',data:semVendas?[0]:months.map(m=>byMonth[m]||0),backgroundColor:'rgba(184,134,11,.6)',borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,suggestedMax:semVendas?100:undefined,ticks:{callback:v=>v===0?'R$ 0':'R$'+v.toLocaleString('pt-BR')},grid:{color:'#222'}},x:{grid:{display:false},ticks:{color:'#888'}}}}
   });
 
   // Gráfico por categoria
   const byCat={};
   salesFiltradas.forEach(s=>{ const p=products.find(x=>x.id===s.productId); const cat=p?.categoria||'Outros'; byCat[cat]=(byCat[cat]||0)+(s.productPreco||0); });
-  const catLabels=Object.keys(byCat), catVals=catLabels.map(c=>byCat[c]);
+  const catLabels=Object.keys(byCat), catVals=catLabels.map(cat=>byCat[cat]);
   const colors=['rgba(200,240,58,.8)','rgba(96,170,255,.8)','rgba(245,166,35,.8)','rgba(77,222,128,.8)','rgba(255,90,90,.8)','rgba(180,120,255,.8)'];
   if(chartCats) chartCats.destroy();
   const semCats=catLabels.length===0;
   chartCats=new Chart(document.getElementById('chart-categorias'),{
     type:'doughnut',
-    data:{
-      labels:semCats?['Sem vendas ainda']:catLabels,
-      datasets:[{data:semCats?[1]:catVals,backgroundColor:semCats?['#2a2a2a']:colors}]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{position:'right',labels:{color:semCats?'#444':'#aaa',font:{size:11}}},
-        tooltip:{enabled:!semCats}
-      }
-    }
+    data:{labels:semCats?['Sem vendas ainda']:catLabels,datasets:[{data:semCats?[1]:catVals,backgroundColor:semCats?['#2a2a2a']:colors}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:semCats?'#444':'#aaa',font:{size:11}}},tooltip:{enabled:!semCats}}}
   });
 
   // Últimas vendas
-  const tbody=document.getElementById('dash-vendas');
   let recentes=[...salesFiltradas];
   if(sortCol.col){
     recentes.sort((a,b)=>{
       let av=a[sortCol.col]||'', bv=b[sortCol.col]||'';
-      if(typeof av==='number'||!isNaN(parseFloat(av))){ av=parseFloat(av)||0; bv=parseFloat(bv)||0; }
+      if(!isNaN(parseFloat(av))){ av=parseFloat(av)||0; bv=parseFloat(bv)||0; }
       return av>bv?sortCol.dir:av<bv?-sortCol.dir:0;
     });
   } else { recentes.sort((a,b)=>b.date?.localeCompare(a.date)); }
   recentes=recentes.slice(0,15);
-  // atualiza ícones
   ['productName','comprador','productPreco','date'].forEach(col=>{
     const el=document.getElementById('sort-'+col);
     if(el) el.textContent=sortCol.col===col?(sortCol.dir===1?'↑':'↓'):'↕';
   });
+
+  const tbody=document.getElementById('dash-vendas');
   if(!recentes.length){ tbody.innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">🧾</div><p>Nenhuma venda ainda.</p></div></td></tr>'; return; }
   tbody.innerHTML=recentes.map(s=>{
     const st=saleStatus(s);
@@ -593,14 +615,6 @@ function renderDashboard(){
   }).join('');
 }
 
-function saleStatus(s){
-  const overdue=s.installments?.some(i=>!i.pago&&isOverdue(i.vencimento));
-  const allPaid=s.installments?.every(i=>i.pago);
-  if(s.pagto==='avista') return '<span class="chip chip-ok">Pago</span>';
-  if(allPaid) return '<span class="chip chip-ok">Quitado</span>';
-  if(overdue) return '<span class="chip chip-danger">Vencida</span>';
-  return '<span class="chip chip-warn">Em aberto</span>';
-}
 
 // ── PRODUTOS ──────────────────────────────────────────────────────────────────
 function renderProdutos(){
