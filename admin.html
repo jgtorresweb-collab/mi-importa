@@ -172,6 +172,19 @@ textarea{resize:vertical;min-height:70px;}
 
     <!-- DASHBOARD -->
     <div id="view-dashboard" class="view active">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
+        <select id="dash-importador" onchange="renderDashboard()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:8px 12px;font-family:var(--font);font-size:13px;min-width:180px">
+          <option value="">Todos os importadores</option>
+        </select>
+        <select id="dash-categoria" onchange="renderDashboard()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:8px 12px;font-family:var(--font);font-size:13px;min-width:160px">
+          <option value="">Todas as categorias</option>
+        </select>
+        <select id="dash-produto" onchange="renderDashboard()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:8px 12px;font-family:var(--font);font-size:13px;min-width:180px">
+          <option value="">Todos os produtos</option>
+        </select>
+        <button onclick="limparFiltrosDash()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:8px 14px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar filtros</button>
+        <span id="dash-filtro-label" style="font-size:12px;color:var(--mu)"></span>
+      </div>
       <div class="stat-grid" id="stat-grid"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
         <div class="card">
@@ -486,17 +499,17 @@ function renderDashboard(){
     return acc+(p?.tipo==='afiliado'?(s.productPreco*(p.comissao||0)/100):0);
   },0);
 
-  // R$ em estoque = preço × qtd disponível de cada produto
-  const valorEstoqueVenda = products.reduce((acc,p)=>{
+  // R$ em estoque = preço × qtd disponível de cada produto (filtrado)
+  const valorEstoqueVenda = prodsFiltrados.reduce((acc,p)=>{
     const disp = estoqueDisp(p);
     return acc + (p.preco * disp);
   }, 0);
-  const valorEstoqueCusto = products.reduce((acc,p)=>{
+  const valorEstoqueCusto = prodsFiltrados.reduce((acc,p)=>{
     const disp = estoqueDisp(p);
     const custoReal = p.moeda!=='BRL' ? (p.custo*(p.cambio||1)) : p.custo;
     return acc + (custoReal * disp);
   }, 0);
-  const qtdEstoque = products.reduce((acc,p)=>acc+estoqueDisp(p), 0);
+  const qtdEstoque = prodsFiltrados.reduce((acc,p)=>acc+estoqueDisp(p), 0);
 
   document.getElementById('stat-grid').innerHTML=`
     <div class="stat"><div class="stat-label">Faturamento total</div><div class="stat-val">${fmtBRL(fat)}</div><div class="stat-sub">${sales.length} vendas</div></div>
@@ -507,13 +520,13 @@ function renderDashboard(){
     <div class="stat warn"><div class="stat-label">Comissões pagas</div><div class="stat-val">${fmtBRL(comissoes)}</div></div>
     <div class="stat danger"><div class="stat-label">Parcelas vencidas</div><div class="stat-val">${pv}</div></div>
     <div class="stat warn"><div class="stat-label">Produtos encalhados</div><div class="stat-val">${enc.length}</div></div>
-    <div class="stat"><div class="stat-label">Total de produtos</div><div class="stat-val">${products.length}</div><div class="stat-sub">${products.filter(p=>!isSoldOut(p)).length} disponíveis</div></div>
-    <div class="stat"><div class="stat-label">Importadores</div><div class="stat-val">${importers.length}</div></div>
+    <div class="stat"><div class="stat-label">Total de produtos</div><div class="stat-val">${prodsFiltrados.length}</div><div class="stat-sub">${prodsFiltrados.filter(p=>!isSoldOut(p)).length} disponíveis</div></div>
+    <div class="stat"><div class="stat-label">Importadores</div><div class="stat-val">${filtImp?1:importers.length}</div></div>
   `;
 
   // Gráfico vendas por mês
   const byMonth={};
-  sales.forEach(s=>{ const m=s.date?.slice(0,7)||''; byMonth[m]=(byMonth[m]||0)+(s.productPreco||0); });
+  salesFiltradas.forEach(s=>{ const m=s.date?.slice(0,7)||''; byMonth[m]=(byMonth[m]||0)+(s.productPreco||0); });
   const months=Object.keys(byMonth).sort().slice(-6);
   const mLabels=months.map(m=>{ const[y,mo]=m.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(mo)-1]+'/'+y.slice(2); });
   if(chartVendas) chartVendas.destroy();
@@ -536,7 +549,7 @@ function renderDashboard(){
 
   // Gráfico por categoria
   const byCat={};
-  sales.forEach(s=>{ const p=products.find(x=>x.id===s.productId); const c=p?.categoria||'Outros'; byCat[c]=(byCat[c]||0)+(s.productPreco||0); });
+  salesFiltradas.forEach(s=>{ const p=products.find(x=>x.id===s.productId); const cat=p?.categoria||'Outros'; byCat[cat]=(byCat[cat]||0)+(s.productPreco||0); });
   const catLabels=Object.keys(byCat), catVals=catLabels.map(c=>byCat[c]);
   const colors=['rgba(200,240,58,.8)','rgba(96,170,255,.8)','rgba(245,166,35,.8)','rgba(77,222,128,.8)','rgba(255,90,90,.8)','rgba(180,120,255,.8)'];
   if(chartCats) chartCats.destroy();
@@ -558,7 +571,7 @@ function renderDashboard(){
 
   // Últimas vendas
   const tbody=document.getElementById('dash-vendas');
-  let recentes=[...sales];
+  let recentes=[...salesFiltradas];
   if(sortCol.col){
     recentes.sort((a,b)=>{
       let av=a[sortCol.col]||'', bv=b[sortCol.col]||'';
