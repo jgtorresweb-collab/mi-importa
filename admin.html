@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="MI Admin">
 <meta name="theme-color" content="#0a0a0a">
 <link rel="apple-touch-icon" href="/logo.png">
-<link rel="manifest" href="/manifest-admin.json">
+
 <style>
 :root{--bg:#0a0a0a;--s1:#141414;--s2:#1e1e1e;--s3:#282828;--b:#333;--ac:#c8f03a;--ac2:#a8cc28;--tx:#f0f0f0;--mu:#777;--danger:#ff5a5a;--warn:#f5a623;--ok:#4cde80;--info:#60aaff;--r:10px;--font:'Segoe UI',system-ui,sans-serif;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -438,8 +438,8 @@ let chartVendas=null, chartCats=null;
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 const fmtBRL=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtDate=d=>{ if(!d) return '—'; const[y,m,day]=d.split('-'); return `${day}/${m}/${y}`; };
-const today=()=>new Date().toISOString().slice(0,10);
-const addMonths=(s,n)=>{ const d=new Date(s+'T12:00:00'); d.setMonth(d.getMonth()+n); return d.toISOString().slice(0,10); };
+const today=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const addMonths=(s,n)=>{ const d=new Date(s+'T12:00:00'); d.setMonth(d.getMonth()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 const isOverdue=d=>d<today();
 const isSoldOut=p=>{ const vendido=sales.filter(s=>s.productId===p.id).reduce((a,s)=>a+(s.qty||1),0); return vendido>=(p.qtd||1); };
 const estoqueDisp=p=>Math.max(0,(p.qtd||1)-sales.filter(s=>s.productId===p.id).reduce((a,s)=>a+(s.qty||1),0));
@@ -794,15 +794,17 @@ async function saveProduto(){
   try{
     if(editProdId){
       const r=await apiFetch('/api/products/'+editProdId,{method:'PUT',body:JSON.stringify(data)});
+      if(r.error) throw new Error(r.error);
       products=products.map(p=>p.id===editProdId?r:p);
       toast('Produto atualizado!');
     }else{
       const r=await apiFetch('/api/products',{method:'POST',body:JSON.stringify(data)});
+      if(r.error) throw new Error(r.error);
       products.unshift(r);
       toast('Produto cadastrado!');
     }
     closeProdutoModal(); renderProdutos();
-  }catch(e){ toast('Erro: '+e.message,true); }
+  }catch(e){ console.error('Erro saveProduto:',e); toast('Erro: '+e.message,true); }
   spinner(false);
 }
 async function deleteProduto(id){

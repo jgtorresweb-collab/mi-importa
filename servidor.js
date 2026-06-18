@@ -99,7 +99,8 @@ const server = http.createServer(async (req, res) => {
   if (method==='POST' && url==='/api/products') {
     const body = JSON.parse((await readBody(req)).toString());
     body.id = uid();
-    body.created_at = new Date().toISOString().slice(0,10);
+    const now = new Date();
+    body.created_at = now.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
     const { data, error } = await supabase.from('products').insert([body]).select().single();
     if (error) return json(res, { error: error.message }, 500);
     return json(res, data, 201);
