@@ -263,13 +263,26 @@ textarea{resize:vertical;min-height:70px;}
 
     <!-- VENDAS -->
     <div id="view-vendas" class="view">
-      <div class="filters">
-        <input type="text" id="venda-search" placeholder="Buscar comprador ou produto..." oninput="renderVendas()">
-        <select id="venda-pagto" onchange="renderVendas()">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+        <input type="text" id="venda-search" placeholder="🔍 Buscar comprador ou produto..." oninput="renderVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:220px">
+        <select id="venda-importador" onchange="renderVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:180px">
+          <option value="">Todos os importadores</option>
+        </select>
+        <select id="venda-cat" onchange="renderVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
+          <option value="">Todas as categorias</option>
+        </select>
+        <select id="venda-pagto" onchange="renderVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:150px">
           <option value="">Todos os pagamentos</option>
           <option value="avista">À vista</option>
           <option value="parcelado">Parcelado</option>
         </select>
+        <select id="venda-status" onchange="renderVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:140px">
+          <option value="">Todos os status</option>
+          <option value="pago">Pago/Quitado</option>
+          <option value="aberto">Em aberto</option>
+          <option value="vencido">Vencida</option>
+        </select>
+        <button onclick="limparFiltrosVenda()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
       </div>
       <div class="card">
         <div class="tbl-wrap">
@@ -295,16 +308,26 @@ textarea{resize:vertical;min-height:70px;}
 
     <!-- RELATORIOS -->
     <div id="view-relatorios" class="view">
-      <div class="filters">
-        <select id="rel-importador" onchange="renderRelatorios()">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+        <select id="rel-importador" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:190px">
           <option value="">Todos os importadores</option>
         </select>
-        <select id="rel-periodo" onchange="renderRelatorios()">
+        <select id="rel-categoria" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
+          <option value="">Todas as categorias</option>
+        </select>
+        <select id="rel-pagto" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:150px">
+          <option value="">Todos os pagamentos</option>
+          <option value="avista">À vista</option>
+          <option value="parcelado">Parcelado</option>
+        </select>
+        <select id="rel-periodo" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
           <option value="30">Últimos 30 dias</option>
           <option value="60">Últimos 60 dias</option>
           <option value="90">Últimos 90 dias</option>
           <option value="999">Todo o período</option>
         </select>
+        <button onclick="pesquisarRelatorio()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
+        <button onclick="limparFiltrosRel()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
       </div>
       <div class="stat-grid" id="rel-stats"></div>
       <div class="card">
@@ -905,13 +928,44 @@ async function deleteImporter(id){
 }
 
 // ── VENDAS ────────────────────────────────────────────────────────────────────
+function limparFiltrosVenda(){
+  document.getElementById('venda-search').value='';
+  document.getElementById('venda-importador').value='';
+  document.getElementById('venda-cat').value='';
+  document.getElementById('venda-pagto').value='';
+  document.getElementById('venda-status').value='';
+  renderVendas();
+}
+
 function renderVendas(){
+  // Popular filtros
+  const impSelV=document.getElementById('venda-importador');
+  const curImpV=impSelV.value;
+  impSelV.innerHTML='<option value="">Todos os importadores</option>'+importers.map(i=>`<option value="${i.id}"${i.id===curImpV?' selected':''}>${i.nome}</option>`).join('');
+  const cats=[...new Set(products.map(p=>p.categoria).filter(Boolean))].sort();
+  const catSelV=document.getElementById('venda-cat');
+  const curCatV=catSelV.value;
+  catSelV.innerHTML='<option value="">Todas as categorias</option>'+cats.map(cat=>`<option value="${cat}"${cat===curCatV?' selected':''}>${cat}</option>`).join('');
+
   const q=document.getElementById('venda-search').value.toLowerCase();
+  const filtImpV=document.getElementById('venda-importador').value;
+  const filtCatV=document.getElementById('venda-cat').value;
   const pagto=document.getElementById('venda-pagto').value;
+  const filtStatus=document.getElementById('venda-status').value;
+
   let list=sales.filter(s=>{
     const mQ=!q||s.comprador.toLowerCase().includes(q)||s.productName.toLowerCase().includes(q);
     const mP=!pagto||(pagto==='avista'&&s.pagto==='avista')||(pagto==='parcelado'&&s.pagto!=='avista');
-    return mQ&&mP;
+    const p=products.find(x=>x.id===s.productId);
+    const mI=!filtImpV||p?.importador===filtImpV;
+    const mC=!filtCatV||p?.categoria===filtCatV;
+    const overdue=s.installments?.some(i=>!i.pago&&isOverdue(i.vencimento));
+    const allPaid=!s.installments?.length||s.installments?.every(i=>i.pago);
+    const mS=!filtStatus||
+      (filtStatus==='pago'&&(s.pagto==='avista'||allPaid))||
+      (filtStatus==='vencido'&&overdue)||
+      (filtStatus==='aberto'&&!allPaid&&!overdue&&s.pagto!=='avista');
+    return mQ&&mP&&mI&&mC&&mS;
   }).sort((a,b)=>b.date?.localeCompare(a.date));
   const tbody=document.getElementById('venda-tbody');
   if(!list.length){ tbody.innerHTML='<tr><td colspan="9"><div class="empty"><div class="empty-icon">🧾</div><p>Nenhuma venda encontrada.</p></div></td></tr>'; return; }
@@ -1007,18 +1061,39 @@ function renderInstList(list,elId,color,paid=false){
 }
 
 // ── RELATÓRIOS ────────────────────────────────────────────────────────────────
+function limparFiltrosRel(){
+  document.getElementById('rel-importador').value='';
+  document.getElementById('rel-categoria').value='';
+  document.getElementById('rel-pagto').value='';
+  document.getElementById('rel-periodo').value='999';
+  renderRelatorios();
+}
+function pesquisarRelatorio(){ renderRelatorios(); }
+
 function renderRelatorios(){
+  // Popular filtros
+  const impSelR=document.getElementById('rel-importador');
+  const curImpR=impSelR.value;
+  impSelR.innerHTML='<option value="">Todos os importadores</option>'+importers.map(i=>`<option value="${i.id}"${i.id===curImpR?' selected':''}>${i.nome}</option>`).join('');
+  const cats=[...new Set(products.map(p=>p.categoria).filter(Boolean))].sort();
+  const catSelR=document.getElementById('rel-categoria');
+  const curCatR=catSelR.value;
+  catSelR.innerHTML='<option value="">Todas as categorias</option>'+cats.map(cat=>`<option value="${cat}"${cat===curCatR?' selected':''}>${cat}</option>`).join('');
+
   const impId=document.getElementById('rel-importador').value;
+  const catId=document.getElementById('rel-categoria').value;
+  const pagtoId=document.getElementById('rel-pagto').value;
   const dias=parseInt(document.getElementById('rel-periodo').value)||999;
   const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-dias);
-  const impSel=document.getElementById('rel-importador');
-  const cur=impSel.value;
-  impSel.innerHTML='<option value="">Todos os importadores</option>'+importers.map(i=>`<option value="${i.id}"${i.id===cur?' selected':''}>${i.nome}</option>`).join('');
 
   let vendas=sales.filter(s=>{
     const d=new Date((s.date||'2000-01-01')+'T12:00:00');
     if(d<cutoff) return false;
-    if(impId){ const p=products.find(x=>x.id===s.productId); return p?.importador===impId; }
+    const p=products.find(x=>x.id===s.productId);
+    if(impId && p?.importador!==impId) return false;
+    if(catId && p?.categoria!==catId) return false;
+    if(pagtoId==='avista' && s.pagto!=='avista') return false;
+    if(pagtoId==='parcelado' && s.pagto==='avista') return false;
     return true;
   }).sort((a,b)=>b.date?.localeCompare(a.date));
 

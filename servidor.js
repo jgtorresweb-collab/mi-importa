@@ -93,7 +93,12 @@ const server = http.createServer(async (req, res) => {
   if (method==='GET' && url==='/api/products') {
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
     if (error) return json(res, { error: error.message }, 500);
-    return json(res, data || []);
+    const fixed = (data || []).map(p => ({
+      ...p,
+      fotos: Array.isArray(p.fotos) ? p.fotos :
+        (typeof p.fotos === 'string' ? JSON.parse(p.fotos || '[]') : [])
+    }));
+    return json(res, fixed);
   }
 
   if (method==='POST' && url==='/api/products') {
@@ -125,7 +130,13 @@ const server = http.createServer(async (req, res) => {
   if (method==='GET' && url==='/api/sales') {
     const { data, error } = await supabase.from('sales').select('*').order('date', { ascending: false });
     if (error) return json(res, { error: error.message }, 500);
-    return json(res, data || []);
+    // Garantir que installments é sempre array (não string)
+    const fixed = (data || []).map(s => ({
+      ...s,
+      installments: Array.isArray(s.installments) ? s.installments :
+        (typeof s.installments === 'string' ? JSON.parse(s.installments || '[]') : [])
+    }));
+    return json(res, fixed);
   }
 
   if (method==='POST' && url==='/api/sales') {
