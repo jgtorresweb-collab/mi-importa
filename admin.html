@@ -552,18 +552,24 @@ async function apiFetch(url,opts={}){
 }
 async function loadAll(){
   try{
-    const [p,s,i,v]=await Promise.all([
+    const [p,s,i] = await Promise.all([
       apiFetch('/api/products'),
       apiFetch('/api/sales'),
       apiFetch('/api/importers'),
-      apiFetch('/api/vendedores'),
     ]);
     products  = Array.isArray(p) ? p : [];
     sales     = Array.isArray(s) ? s : [];
     importers = Array.isArray(i) ? i : [];
-    vendedores= Array.isArray(v) ? v : [];
   }catch(e){
     console.error('loadAll erro:',e);
+  }
+  // Carregar vendedores separado para não travar o resto
+  try{
+    const v = await apiFetch('/api/vendedores');
+    vendedores = Array.isArray(v) ? v : [];
+  }catch(e){
+    console.error('vendedores erro:',e);
+    vendedores = [];
   }
   refreshAll();
 }
