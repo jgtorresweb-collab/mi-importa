@@ -513,7 +513,12 @@ function showView(name,el){
   document.getElementById('view-'+name).classList.add('active');
   if(el){ el.classList.add('active'); }
   document.getElementById('page-title').textContent=titles[name]||name;
-  refreshView(name);
+  // Recarregar dados frescos ao entrar em vendas ou parcelas
+  if(name==='vendas'||name==='parcelas'){
+    loadAll();
+  } else {
+    refreshView(name);
+  }
   return false;
 }
 function refreshAll(){ const id=document.querySelector('.view.active')?.id?.replace('view-',''); if(id) refreshView(id); }
@@ -521,7 +526,7 @@ function refreshView(name){
   if(name==='dashboard')    renderDashboard();
   if(name==='produtos')     renderProdutos();
   if(name==='importadores') renderImportadores();
-  if(name==='vendas')       renderVendas();
+  if(name==='vendas')       { renderVendas(); }
   if(name==='parcelas')     renderParcelas();
   if(name==='relatorios')   renderRelatorios();
   if(name==='encalhados')   renderEncalhados();
@@ -1036,18 +1041,111 @@ function switchTab(tab,el){
   ['pagas','avencer','vencidas'].forEach(t=>document.getElementById('parc-'+t).style.display=t===tab?'':'none');
   renderParcelas();
 }
+function limparFiltrosParc(){
+  document.getElementById('parc-search').value='';
+  document.getElementById('parc-importador').value='';
+  document.getElementById('parc-categoria').value='';
+  renderParcelas();
+}
+
 function renderParcelas(){
+  // Popular filtros
+  const impSelP=document.getElementById('parc-importador');
+  if(impSelP){
+    const curImpP=impSelP.value;
+    impSelP.innerHTML='<option value="">Todos os importadores</option>'+importers.map(i=>`<option value="${i.id}"${i.id===curImpP?' selected':''}>${i.nome}</option>`).join('');
+    const cats=[...new Set(products.map(p=>p.categoria).filter(Boolean))].sort();
+    const catSelP=document.getElementById('parc-categoria');
+    const curCatP=catSelP.value;
+    catSelP.innerHTML='<option value="">Todas as categorias</option>'+cats.map(cat=>`<option value="${cat}"${cat===curCatP?' selected':''}>${cat}</option>`).join('');
+  }
+
+  const qP=(document.getElementById('parc-search')?.value||'').toLowerCase();
+  const filtImpP=document.getElementById('parc-importador')?.value||'';
+  const filtCatP=document.getElementById('parc-categoria')?.value||'';
+
   const all=[];
-  sales.forEach(s=>(s.installments||[]).forEach(i=>all.push({...i,sale:s})));
-  // Normalizar: pago pode ser boolean true/false ou string "true"/"false"
+  sales.forEach(s=>{
+    const prod=products.find(x=>x.id===s.productId);
+    // Aplicar filtros
+    if(filtImpP && prod?.importador!==filtImpP) return;
+    if(filtCatP && prod?.categoria!==filtCatP) return;
+    if(qP && !s.comprador.toLowerCase().includes(qP) && !s.productName.toLowerCase().includes(qP)) return;
+    (s.installments||[]).forEach(i=>all.push({...i,sale:s}));
+  });
+
   const isPago=i=>i.pago===true||i.pago==='true';
   const vencidas=all.filter(i=>!isPago(i)&&isOverdue(i.vencimento)).sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
   const avencer=all.filter(i=>!isPago(i)&&!isOverdue(i.vencimento)).sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
   const pagas=all.filter(i=>isPago(i)).sort((a,b)=>b.vencimento.localeCompare(a.vencimento));
   renderInstList(vencidas,'parc-vencidas','var(--danger)');
-  renderInstList(avencer,'parc-avencer','var(--warn)');
+  renderAVencer(avencer);
   renderInstList(pagas,'parc-pagas','var(--ok)',true);
 }
+
+function renderAVencer(list){
+  const el=document.getElementById('parc-avencer');
+  if(!list.length){ el.innerHTML='<p style="color:var(--mu);font-size:13px;padding:12px 0">Nenhuma parcela a vencer.</p>'; return; }
+
+  // Cards de resumo por mes
+  const porMes={};
+  list.forEach(i=>{ const mes=i.vencimento.slice(0,7); porMes[mes]=(porMes[mes]||0)+(i.valor||0); });
+  const meses=Object.keys(porMes).sort();
+  const nomeMes=m=>{ const[y,mo]=m.split('-'); return ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][parseInt(mo)-1]+'/'+y.slice(2); };
+
+  let html='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">';
+  meses.forEach(m=>{
+    html+='<div style="background:var(--s2);border:1px solid #b8860b55;border-radius:10px;padding:14px 18px;min-width:160px;">'
+      +'<div style="font-size:11px;color:#b8860b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">'+nomeMes(m)+'</div>'
+      +'<div style="font-size:20px;font-weight:700;color:#ffd700">'+fmtBRL(porMes[m])+'</div>'
+      +'<div style="font-size:11px;color:var(--mu);margin-top:3px">'+list.filter(i=>i.vencimento.startsWith(m)).length+' parcela(s)</div>'
+      +'</div>';
+  });
+  html+='</div>';
+
+  // Agrupar por comprador + data de vencimento
+  const grupos={};
+  list.forEach(i=>{
+    const key=i.sale.comprador+'||'+i.vencimento;
+    if(!grupos[key]) grupos[key]={comprador:i.sale.comprador,vencimento:i.vencimento,itens:[],total:0};
+    grupos[key].itens.push(i);
+    grupos[key].total+=(i.valor||0);
+  });
+
+  const gruposOrdenados=Object.values(grupos).sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
+
+  gruposOrdenados.forEach(g=>{
+    const multi=g.itens.length>1;
+    html+='<div style="background:var(--s1);border:1px solid var(--b);border-radius:10px;margin-bottom:10px;overflow:hidden;">'
+      +'<div style="background:var(--s2);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">'
+      +'<div><strong style="font-size:14px">'+g.comprador+'</strong>'
+      +'<span style="color:var(--mu);font-size:12px;margin-left:8px">Vence '+fmtDate(g.vencimento)+'</span></div>'
+      +(multi?'<div style="font-size:12px;color:var(--mu)">'+g.itens.length+' parcelas</div>':'')
+      +'</div>';
+
+    g.itens.forEach(i=>{
+      html+='<div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--b);flex-wrap:wrap;gap:6px;">'
+        +'<div style="font-size:13px;color:var(--mu)">'+i.sale.productName
+        +'<span style="font-size:11px;margin-left:6px">Parcela '+i.num+'/'+i.total+'</span></div>'
+        +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<span style="font-weight:600;color:var(--warn)">'+fmtBRL(i.valor)+'</span>'
+        +'<button class="btn btn-sm" onclick="markPaid(''+i.sale.id+'','+i.num+')">Pago</button>'
+        +'</div></div>';
+    });
+
+    if(multi){
+      html+='<div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #b8860b55;background:var(--s2);">'
+        +'<span style="font-size:13px;font-weight:700;color:var(--mu)">Total a receber de '+g.comprador+'</span>'
+        +'<span style="font-size:18px;font-weight:700;color:#ffd700">'+fmtBRL(g.total)+'</span>'
+        +'</div>';
+    }
+    html+='</div>';
+  });
+
+  el.innerHTML=html;
+}
+
+
 function renderInstList(list,elId,color,paid=false){
   const el=document.getElementById(elId);
   if(!list.length){ el.innerHTML=`<p style="color:var(--mu);font-size:13px;padding:12px 0">Nenhuma parcela aqui.</p>`; return; }
