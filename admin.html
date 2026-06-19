@@ -483,11 +483,18 @@ async function apiFetch(url,opts={}){
   return r.json();
 }
 async function loadAll(){
-  [products,sales,importers]=await Promise.all([
-    apiFetch('/api/products'),
-    apiFetch('/api/sales'),
-    apiFetch('/api/importers'),
-  ]);
+  try{
+    const [p,s,i]=await Promise.all([
+      apiFetch('/api/products'),
+      apiFetch('/api/sales'),
+      apiFetch('/api/importers'),
+    ]);
+    products = Array.isArray(p) ? p : [];
+    sales    = Array.isArray(s) ? s : [];
+    importers= Array.isArray(i) ? i : [];
+  }catch(e){
+    console.error('loadAll erro:',e);
+  }
   refreshAll();
 }
 
@@ -513,12 +520,7 @@ function showView(name,el){
   document.getElementById('view-'+name).classList.add('active');
   if(el){ el.classList.add('active'); }
   document.getElementById('page-title').textContent=titles[name]||name;
-  // Recarregar dados frescos ao entrar em vendas ou parcelas
-  if(name==='vendas'||name==='parcelas'){
-    loadAll();
-  } else {
-    refreshView(name);
-  }
+  refreshView(name);
   return false;
 }
 function refreshAll(){ const id=document.querySelector('.view.active')?.id?.replace('view-',''); if(id) refreshView(id); }
@@ -601,6 +603,7 @@ function renderDashboard(){
   },0);
   const qtdEstoque=prodsFiltrados.reduce((acc,p)=>acc+estoqueDisp(p),0);
 
+  if(!document.getElementById('stat-grid')) return;
   document.getElementById('stat-grid').innerHTML=`
     <div class="stat"><div class="stat-label">Faturamento total</div><div class="stat-val">${fmtBRL(fat)}</div><div class="stat-sub">${salesFiltradas.length} vendas</div></div>
     <div class="stat"><div class="stat-label">Lucro estimado</div><div class="stat-val">${fmtBRL(lucro)}</div><div class="stat-sub">margem: ${fat?((lucro/fat)*100).toFixed(1):0}%</div></div>
