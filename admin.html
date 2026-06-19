@@ -1096,17 +1096,14 @@ function renderAVencer(list){
   const meses=Object.keys(porMes).sort();
   const nomeMes=m=>{ const[y,mo]=m.split('-'); return ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][parseInt(mo)-1]+'/'+y.slice(2); };
 
-  let html='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">';
-  meses.forEach(m=>{
-    html+='<div style="background:var(--s2);border:1px solid #b8860b55;border-radius:10px;padding:14px 18px;min-width:160px;">'
-      +'<div style="font-size:11px;color:#b8860b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">'+nomeMes(m)+'</div>'
-      +'<div style="font-size:20px;font-weight:700;color:#ffd700">'+fmtBRL(porMes[m])+'</div>'
-      +'<div style="font-size:11px;color:var(--mu);margin-top:3px">'+list.filter(i=>i.vencimento.startsWith(m)).length+' parcela(s)</div>'
-      +'</div>';
-  });
-  html+='</div>';
+  const divMeses = meses.map(m=>`
+    <div style="background:var(--s2);border:1px solid #b8860b55;border-radius:10px;padding:14px 18px;min-width:160px;">
+      <div style="font-size:11px;color:#b8860b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">${nomeMes(m)}</div>
+      <div style="font-size:20px;font-weight:700;color:#ffd700">${fmtBRL(porMes[m])}</div>
+      <div style="font-size:11px;color:var(--mu);margin-top:3px">${list.filter(i=>i.vencimento.startsWith(m)).length} parcela(s)</div>
+    </div>`).join('');
 
-  // Agrupar por comprador + data de vencimento
+  // Agrupar por comprador + data
   const grupos={};
   list.forEach(i=>{
     const key=i.sale.comprador+'||'+i.vencimento;
@@ -1117,35 +1114,41 @@ function renderAVencer(list){
 
   const gruposOrdenados=Object.values(grupos).sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
 
-  gruposOrdenados.forEach(g=>{
+  const divGrupos = gruposOrdenados.map(g=>{
     const multi=g.itens.length>1;
-    html+='<div style="background:var(--s1);border:1px solid var(--b);border-radius:10px;margin-bottom:10px;overflow:hidden;">'
-      +'<div style="background:var(--s2);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">'
-      +'<div><strong style="font-size:14px">'+g.comprador+'</strong>'
-      +'<span style="color:var(--mu);font-size:12px;margin-left:8px">Vence '+fmtDate(g.vencimento)+'</span></div>'
-      +(multi?'<div style="font-size:12px;color:var(--mu)">'+g.itens.length+' parcelas</div>':'')
-      +'</div>';
+    const itensHTML = g.itens.map(i=>`
+      <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--b);flex-wrap:wrap;gap:6px;">
+        <div style="font-size:13px;color:var(--mu)">
+          ${i.sale.productName}
+          <span style="font-size:11px;margin-left:6px">Parcela ${i.num}/${i.total}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-weight:600;color:var(--warn)">${fmtBRL(i.valor)}</span>
+          <button class="btn btn-sm" onclick="markPaid('${i.sale.id}',${i.num})">✔ Pago</button>
+        </div>
+      </div>`).join('');
 
-    g.itens.forEach(i=>{
-      html+='<div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--b);flex-wrap:wrap;gap:6px;">'
-        +'<div style="font-size:13px;color:var(--mu)">'+i.sale.productName
-        +'<span style="font-size:11px;margin-left:6px">Parcela '+i.num+'/'+i.total+'</span></div>'
-        +'<div style="display:flex;align-items:center;gap:10px">'
-        +'<span style="font-weight:600;color:var(--warn)">'+fmtBRL(i.valor)+'</span>'
-        +'<button class="btn btn-sm" onclick="markPaid(''+i.sale.id+'','+i.num+')">Pago</button>'
-        +'</div></div>';
-    });
+    const totalHTML = multi ? `
+      <div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #b8860b55;background:var(--s2);">
+        <span style="font-size:13px;font-weight:700;color:var(--mu)">Total · ${g.comprador}</span>
+        <span style="font-size:18px;font-weight:700;color:#ffd700">${fmtBRL(g.total)}</span>
+      </div>` : '';
 
-    if(multi){
-      html+='<div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #b8860b55;background:var(--s2);">'
-        +'<span style="font-size:13px;font-weight:700;color:var(--mu)">Total a receber de '+g.comprador+'</span>'
-        +'<span style="font-size:18px;font-weight:700;color:#ffd700">'+fmtBRL(g.total)+'</span>'
-        +'</div>';
-    }
-    html+='</div>';
-  });
+    return `
+      <div style="background:var(--s1);border:1px solid var(--b);border-radius:10px;margin-bottom:10px;overflow:hidden;">
+        <div style="background:var(--s2);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+          <div>
+            <strong style="font-size:14px">${g.comprador}</strong>
+            <span style="color:var(--mu);font-size:12px;margin-left:8px">Vence ${fmtDate(g.vencimento)}</span>
+          </div>
+          ${multi?`<div style="font-size:12px;color:var(--mu)">${g.itens.length} parcelas</div>`:''}
+        </div>
+        ${itensHTML}
+        ${totalHTML}
+      </div>`;
+  }).join('');
 
-  el.innerHTML=html;
+  el.innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">${divMeses}</div>${divGrupos}`;
 }
 
 
