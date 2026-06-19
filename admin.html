@@ -297,6 +297,17 @@ textarea{resize:vertical;min-height:70px;}
 
     <!-- PARCELAS -->
     <div id="view-parcelas" class="view">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+        <input type="text" id="parc-search" placeholder="🔍 Buscar comprador ou produto..." style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:240px">
+        <select id="parc-importador" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:180px">
+          <option value="">Todos os importadores</option>
+        </select>
+        <select id="parc-categoria" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
+          <option value="">Todas as categorias</option>
+        </select>
+        <button onclick="renderParcelas()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
+        <button onclick="limparFiltrosParc()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
+      </div>
       <div class="tabs">
         <div class="tab active" onclick="switchTab('pagas',this)">✔ Pagas</div>
         <div class="tab" onclick="switchTab('avencer',this)">📅 A vencer</div>
