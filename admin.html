@@ -265,23 +265,24 @@ textarea{resize:vertical;min-height:70px;}
     <div id="view-vendas" class="view">
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
         <input type="text" id="venda-search" placeholder="🔍 Buscar comprador ou produto..." oninput="renderVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:220px">
-        <select id="venda-importador" onchange="renderVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:180px">
+        <select id="venda-importador" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:180px">
           <option value="">Todos os importadores</option>
         </select>
-        <select id="venda-cat" onchange="renderVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
+        <select id="venda-cat" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
           <option value="">Todas as categorias</option>
         </select>
-        <select id="venda-pagto" onchange="renderVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:150px">
+        <select id="venda-pagto" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:150px">
           <option value="">Todos os pagamentos</option>
           <option value="avista">À vista</option>
           <option value="parcelado">Parcelado</option>
         </select>
-        <select id="venda-status" onchange="renderVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:140px">
+        <select id="venda-status" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:140px">
           <option value="">Todos os status</option>
           <option value="pago">Pago/Quitado</option>
           <option value="aberto">Em aberto</option>
           <option value="vencido">Vencida</option>
         </select>
+        <button onclick="renderVendas()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosVenda()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
       </div>
       <div class="card">
@@ -297,13 +298,13 @@ textarea{resize:vertical;min-height:70px;}
     <!-- PARCELAS -->
     <div id="view-parcelas" class="view">
       <div class="tabs">
-        <div class="tab active" onclick="switchTab('vencidas',this)">⚠ Vencidas</div>
+        <div class="tab active" onclick="switchTab('pagas',this)">✔ Pagas</div>
         <div class="tab" onclick="switchTab('avencer',this)">📅 A vencer</div>
-        <div class="tab" onclick="switchTab('pagas',this)">✔ Pagas</div>
+        <div class="tab" onclick="switchTab('vencidas',this)">⚠ Vencidas</div>
       </div>
-      <div id="parc-vencidas"></div>
+      <div id="parc-pagas"></div>
       <div id="parc-avencer" style="display:none"></div>
-      <div id="parc-pagas" style="display:none"></div>
+      <div id="parc-vencidas" style="display:none"></div>
     </div>
 
     <!-- RELATORIOS -->
@@ -1027,20 +1028,22 @@ async function markPaid(saleId,num){
 }
 
 // ── PARCELAS ──────────────────────────────────────────────────────────────────
-let parcelaTab='vencidas';
+let parcelaTab='pagas';
 function switchTab(tab,el){
   parcelaTab=tab;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  ['vencidas','avencer','pagas'].forEach(t=>document.getElementById('parc-'+t).style.display=t===tab?'':'none');
+  ['pagas','avencer','vencidas'].forEach(t=>document.getElementById('parc-'+t).style.display=t===tab?'':'none');
   renderParcelas();
 }
 function renderParcelas(){
   const all=[];
   sales.forEach(s=>(s.installments||[]).forEach(i=>all.push({...i,sale:s})));
-  const vencidas=all.filter(i=>!i.pago&&isOverdue(i.vencimento)).sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
-  const avencer=all.filter(i=>!i.pago&&!isOverdue(i.vencimento)).sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
-  const pagas=all.filter(i=>i.pago).sort((a,b)=>b.vencimento.localeCompare(a.vencimento));
+  // Normalizar: pago pode ser boolean true/false ou string "true"/"false"
+  const isPago=i=>i.pago===true||i.pago==='true';
+  const vencidas=all.filter(i=>!isPago(i)&&isOverdue(i.vencimento)).sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
+  const avencer=all.filter(i=>!isPago(i)&&!isOverdue(i.vencimento)).sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
+  const pagas=all.filter(i=>isPago(i)).sort((a,b)=>b.vencimento.localeCompare(a.vencimento));
   renderInstList(vencidas,'parc-vencidas','var(--danger)');
   renderInstList(avencer,'parc-avencer','var(--warn)');
   renderInstList(pagas,'parc-pagas','var(--ok)',true);
