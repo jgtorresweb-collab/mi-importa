@@ -203,6 +203,12 @@ td{padding:10px 11px;border-bottom:1px solid var(--b);vertical-align:middle;}
           <span id="qty-max" style="font-size:11px;color:var(--mu)"></span>
         </div>
       </div>
+      <div class="field full">
+        <label>Vendedor responsável</label>
+        <select id="c-vendedor" style="width:100%">
+          <option value="">— Selecione o vendedor —</option>
+        </select>
+      </div>
       <div class="field"><label>Forma de pagamento *</label>
         <select id="c-pagto" onchange="toggleParcelas()">
           <option value="avista">À vista</option>
@@ -252,7 +258,7 @@ td{padding:10px 11px;border-bottom:1px solid var(--b);vertical-align:middle;}
 
 <script>
 const API='';
-let products=[], sales=[];
+let products=[], sales=[], vendedores=[];
 let sortMode='none', buyingId=null, buyQty=1;
 let carFotos=[], carIdx=0;
 
@@ -403,6 +409,10 @@ function openCompModal(pid){
   document.getElementById('c-ind').value='';
   document.getElementById('c-tel').value='';
   document.getElementById('c-pagto').value='avista';
+  // Popular vendedores
+  const vSel=document.getElementById('c-vendedor');
+  vSel.innerHTML='<option value="">— Selecione o vendedor —</option>'
+    +vendedores.filter(v=>v.ativo!==false&&v.ativo!=='false').map(v=>`<option value="${v.id}|${v.nome}|${v.comissao||0}">${v.nome} (${v.comissao||0}% comissão)</option>`).join('');
   document.getElementById('c-venc').value=addMonths(today(),1);
   toggleParcelas();
   document.getElementById('modal-comp').classList.remove('hidden');
@@ -454,11 +464,19 @@ async function confirmarVenda(){
 
   spinner(true);
   try{
+    // Calcular comissão do vendedor
+    const vendParts=(document.getElementById('c-vendedor').value||'').split('|');
+    const vendedorId=vendParts[0]||'';
+    const vendedorNome=vendParts[1]||'';
+    const vendedorPct=parseFloat(vendParts[2])||0;
+    const comissaoVendedor=vendedorId?parseFloat(((totalVenda*vendedorPct)/100).toFixed(2)):0;
+
     const r=await fetch(API+'/api/sales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       productId:buyingId, productName:p.nome, productPreco:p.preco,
       qty:buyQty, totalVenda,
       comprador:nome, indicacao:document.getElementById('c-ind').value.trim(),
       tel:document.getElementById('c-tel').value.trim(), pagto, installments,
+      vendedorId, vendedorNome, comissaoVendedor,
     })});
     const s=await r.json();
     sales.unshift(s);

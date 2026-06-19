@@ -146,6 +146,7 @@ textarea{resize:vertical;min-height:70px;}
     <span class="sep">Cadastros</span>
     <a href="#" onclick="showView('produtos',this)">📦 Produtos</a>
     <a href="#" onclick="showView('importadores',this)">🏢 Importadores</a>
+    <a href="#" onclick="showView('vendedores',this)">👤 Vendedores</a>
     <span class="sep">Operacional</span>
     <a href="#" onclick="showView('vendas',this)">🧾 Vendas</a>
     <a href="#" onclick="showView('parcelas',this)">📅 Parcelas</a>
@@ -181,6 +182,9 @@ textarea{resize:vertical;min-height:70px;}
         </select>
         <select id="dash-produto" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:200px">
           <option value="">Todos os produtos</option>
+        </select>
+        <select id="dash-vendedor" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:170px">
+          <option value="">Todos os vendedores</option>
         </select>
         <button onclick="aplicarFiltrosDash()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosDash()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
@@ -282,6 +286,9 @@ textarea{resize:vertical;min-height:70px;}
           <option value="aberto">Em aberto</option>
           <option value="vencido">Vencida</option>
         </select>
+        <select id="venda-vendedor" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
+          <option value="">Todos os vendedores</option>
+        </select>
         <button onclick="renderVendas()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosVenda()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
       </div>
@@ -304,6 +311,9 @@ textarea{resize:vertical;min-height:70px;}
         </select>
         <select id="parc-categoria" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
           <option value="">Todas as categorias</option>
+        </select>
+        <select id="parc-vendedor" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
+          <option value="">Todos os vendedores</option>
         </select>
         <button onclick="renderParcelas()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosParc()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
@@ -338,6 +348,9 @@ textarea{resize:vertical;min-height:70px;}
           <option value="90">Últimos 90 dias</option>
           <option value="999">Todo o período</option>
         </select>
+        <select id="rel-vendedor" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
+          <option value="">Todos os vendedores</option>
+        </select>
         <button onclick="pesquisarRelatorio()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosRel()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
       </div>
@@ -348,6 +361,21 @@ textarea{resize:vertical;min-height:70px;}
           <table>
             <thead><tr><th>Produto</th><th>Importador</th><th>Comprador</th><th>Custo</th><th>Venda</th><th>Lucro</th><th>Comissão</th><th>Data</th></tr></thead>
             <tbody id="rel-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VENDEDORES -->
+    <div id="view-vendedores" class="view">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+        <button class="btn" onclick="openVendedorModal()">+ Novo vendedor</button>
+      </div>
+      <div class="card">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>Email</th><th>Comissão %</th><th>Vendas</th><th>Total comissões</th><th>Status</th><th></th></tr></thead>
+            <tbody id="vend-tbody"></tbody>
           </table>
         </div>
       </div>
@@ -459,13 +487,42 @@ textarea{resize:vertical;min-height:70px;}
   </div>
 </div>
 
+<!-- MODAL VENDEDOR -->
+<div class="overlay hidden" id="modal-vendedor">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">
+      <span id="mvend-title">Novo vendedor</span>
+      <button class="icon-btn" onclick="closeVendedorModal()" style="font-size:20px">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="field full"><label>Nome completo *</label><input type="text" id="v-nome" placeholder="Ex: João Silva"></div>
+      <div class="field"><label>CPF</label><input type="text" id="v-cpf" placeholder="000.000.000-00"></div>
+      <div class="field"><label>Telefone</label><input type="tel" id="v-tel" placeholder="(21) 99999-9999"></div>
+      <div class="field"><label>E-mail</label><input type="email" id="v-email" placeholder="joao@email.com"></div>
+      <div class="field"><label>Endereço</label><input type="text" id="v-endereco" placeholder="Rua, número, bairro"></div>
+      <div class="field"><label>% Comissão sobre vendas</label><input type="number" id="v-comissao" placeholder="Ex: 10" min="0" max="100" step="0.1"></div>
+      <div class="field"><label>Status</label>
+        <select id="v-ativo">
+          <option value="true">Ativo</option>
+          <option value="false">Inativo</option>
+        </select>
+      </div>
+      <div class="field full"><label>Observações</label><textarea id="v-obs"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sec" onclick="closeVendedorModal()">Cancelar</button>
+      <button class="btn" onclick="saveVendedor()">Salvar vendedor</button>
+    </div>
+  </div>
+</div>
+
 <div id="spinner" class="hidden"><div class="spin"></div></div>
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
 const API = '';
-let products=[], sales=[], importers=[];
+let products=[], sales=[], importers=[], vendedores=[];
 let editProdId=null, editImpId=null;
 let fotosAtuais=[];
 let chartVendas=null, chartCats=null;
@@ -495,14 +552,16 @@ async function apiFetch(url,opts={}){
 }
 async function loadAll(){
   try{
-    const [p,s,i]=await Promise.all([
+    const [p,s,i,v]=await Promise.all([
       apiFetch('/api/products'),
       apiFetch('/api/sales'),
       apiFetch('/api/importers'),
+      apiFetch('/api/vendedores'),
     ]);
-    products = Array.isArray(p) ? p : [];
-    sales    = Array.isArray(s) ? s : [];
-    importers= Array.isArray(i) ? i : [];
+    products  = Array.isArray(p) ? p : [];
+    sales     = Array.isArray(s) ? s : [];
+    importers = Array.isArray(i) ? i : [];
+    vendedores= Array.isArray(v) ? v : [];
   }catch(e){
     console.error('loadAll erro:',e);
   }
@@ -524,7 +583,7 @@ async function checkServer(){
 checkServer(); setInterval(checkServer,8000);
 
 // ── VIEWS ─────────────────────────────────────────────────────────────────────
-const titles={dashboard:'Dashboard',produtos:'Produtos',importadores:'Importadores',vendas:'Vendas',parcelas:'Parcelas',relatorios:'Relatórios',encalhados:'Encalhados'};
+const titles={dashboard:'Dashboard',produtos:'Produtos',importadores:'Importadores',vendedores:'Vendedores',vendas:'Vendas',parcelas:'Parcelas',relatorios:'Relatórios',encalhados:'Encalhados'};
 function showView(name,el){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
@@ -539,6 +598,7 @@ function refreshView(name){
   if(name==='dashboard')    renderDashboard();
   if(name==='produtos')     renderProdutos();
   if(name==='importadores') renderImportadores();
+  if(name==='vendedores')   renderVendedores();
   if(name==='vendas')       { renderVendas(); }
   if(name==='parcelas')     renderParcelas();
   if(name==='relatorios')   renderRelatorios();
@@ -558,12 +618,14 @@ function popularFiltrosDash(){
   const filtCat=document.getElementById('dash-categoria').value;
   const prods=products.filter(p=>(!filtImp||p.importador===filtImp)&&(!filtCat||p.categoria===filtCat));
   document.getElementById('dash-produto').innerHTML='<option value="">Todos os produtos</option>'+prods.map(p=>`<option value="${p.id}"${p.id===curProd?' selected':''}>${p.nome}</option>`).join('');
+  popularFiltroVendedor('dash-vendedor');
 }
 function aplicarFiltrosDash(){ renderDashboard(); }
 function limparFiltrosDash(){
   document.getElementById('dash-importador').value='';
   document.getElementById('dash-categoria').value='';
   document.getElementById('dash-produto').value='';
+  document.getElementById('dash-vendedor').value='';
   renderDashboard();
 }
 
@@ -573,6 +635,7 @@ function renderDashboard(){
   const filtImp=document.getElementById('dash-importador')?.value||'';
   const filtCat=document.getElementById('dash-categoria')?.value||'';
   const filtProd=document.getElementById('dash-produto')?.value||'';
+  const filtVendDash=document.getElementById('dash-vendedor')?.value||'';
 
   // Label
   const filtros=[];
@@ -590,7 +653,7 @@ function renderDashboard(){
     return true;
   });
   const idsFilt=new Set(prodsFiltrados.map(p=>p.id));
-  const salesFiltradas=sales.filter(s=>idsFilt.has(s.productId));
+  const salesFiltradas=sales.filter(s=>idsFilt.has(s.productId)&&(!filtVendDash||s.vendedorId===filtVendDash));
 
   const fat=salesFiltradas.reduce((s,v)=>s+(v.productPreco||0),0);
   const lucro=salesFiltradas.reduce((acc,s)=>{
@@ -964,6 +1027,7 @@ function limparFiltrosVenda(){
   document.getElementById('venda-cat').value='';
   document.getElementById('venda-pagto').value='';
   document.getElementById('venda-status').value='';
+  const vv=document.getElementById('venda-vendedor'); if(vv) vv.value='';
   renderVendas();
 }
 
@@ -976,12 +1040,14 @@ function renderVendas(){
   const catSelV=document.getElementById('venda-cat');
   const curCatV=catSelV.value;
   catSelV.innerHTML='<option value="">Todas as categorias</option>'+cats.map(cat=>`<option value="${cat}"${cat===curCatV?' selected':''}>${cat}</option>`).join('');
+  popularFiltroVendedor('venda-vendedor');
 
   const q=document.getElementById('venda-search').value.toLowerCase();
   const filtImpV=document.getElementById('venda-importador').value;
   const filtCatV=document.getElementById('venda-cat').value;
   const pagto=document.getElementById('venda-pagto').value;
   const filtStatus=document.getElementById('venda-status').value;
+  const filtVendV=document.getElementById('venda-vendedor')?.value||'';
 
   let list=sales.filter(s=>{
     const mQ=!q||s.comprador.toLowerCase().includes(q)||s.productName.toLowerCase().includes(q);
@@ -989,23 +1055,26 @@ function renderVendas(){
     const p=products.find(x=>x.id===s.productId);
     const mI=!filtImpV||p?.importador===filtImpV;
     const mC=!filtCatV||p?.categoria===filtCatV;
+    const mV=!filtVendV||s.vendedorId===filtVendV;
     const overdue=s.installments?.some(i=>!i.pago&&isOverdue(i.vencimento));
     const allPaid=!s.installments?.length||s.installments?.every(i=>i.pago);
     const mS=!filtStatus||
       (filtStatus==='pago'&&(s.pagto==='avista'||allPaid))||
       (filtStatus==='vencido'&&overdue)||
       (filtStatus==='aberto'&&!allPaid&&!overdue&&s.pagto!=='avista');
-    return mQ&&mP&&mI&&mC&&mS;
+    return mQ&&mP&&mI&&mC&&mV&&mS;
   }).sort((a,b)=>b.date?.localeCompare(a.date));
   const tbody=document.getElementById('venda-tbody');
   if(!list.length){ tbody.innerHTML='<tr><td colspan="9"><div class="empty"><div class="empty-icon">🧾</div><p>Nenhuma venda encontrada.</p></div></td></tr>'; return; }
   tbody.innerHTML=list.map(s=>`<tr>
     <td><strong>${s.productName}</strong></td>
     <td>${s.comprador}</td>
+    <td style="font-size:12px">${s.vendedorNome||'—'}</td>
     <td>${s.indicacao||'—'}</td>
     <td>${s.tel||'—'}</td>
     <td>${s.pagto==='avista'?'À vista':s.pagto}</td>
     <td style="font-weight:700">${fmtBRL(s.productPreco)}</td>
+    <td style="color:var(--warn)">${s.comissaoVendedor>0?fmtBRL(s.comissaoVendedor):'—'}</td>
     <td>${fmtDate(s.date)}</td>
     <td>${saleStatus(s)}</td>
     <td>
@@ -1017,6 +1086,8 @@ function renderVendas(){
 function openVendaModal(id){
   const s=sales.find(x=>x.id===id); if(!s) return;
   const p=products.find(x=>x.id===s.productId);
+  const vendedor=vendedores.find(v=>v.id===s.vendedorId);
+  const comissaoVal=s.comissaoVendedor||0;
   let html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
     <div><label style="font-size:11px;color:var(--mu)">Produto</label><div style="font-weight:600">${s.productName}</div></div>
     <div><label style="font-size:11px;color:var(--mu)">Valor</label><div style="font-weight:700;color:var(--ac)">${fmtBRL(s.productPreco)}</div></div>
@@ -1026,6 +1097,8 @@ function openVendaModal(id){
     <div><label style="font-size:11px;color:var(--mu)">Pagamento</label><div>${s.pagto==='avista'?'À vista':s.pagto}</div></div>
     <div><label style="font-size:11px;color:var(--mu)">Data</label><div>${fmtDate(s.date)}</div></div>
     <div><label style="font-size:11px;color:var(--mu)">Lucro estimado</label><div style="color:var(--ok)">${p?fmtBRL(lucroReal(p)):'—'}</div></div>
+    <div><label style="font-size:11px;color:var(--mu)">Vendedor</label><div>${s.vendedorNome||'—'}</div></div>
+    <div><label style="font-size:11px;color:var(--mu)">Comissão vendedor</label><div style="color:var(--warn)">${comissaoVal>0?fmtBRL(comissaoVal):'—'}</div></div>
   </div>`;
   if(s.installments?.length){
     html+=`<div style="margin-top:16px"><div style="font-size:12px;color:var(--mu);margin-bottom:8px;font-weight:600;text-transform:uppercase">Parcelas</div>`;
@@ -1326,6 +1399,93 @@ let sortProdCol={col:null,dir:1};
 function sortProd(col){
   if(sortProdCol.col===col) sortProdCol.dir*=-1; else{ sortProdCol.col=col; sortProdCol.dir=1; }
   renderProdutos();
+}
+
+// ── VENDEDORES ────────────────────────────────────────────────────────────────
+function popularFiltroVendedor(selId){
+  const sel=document.getElementById(selId); if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Todos os vendedores</option>'
+    +vendedores.filter(v=>v.ativo!==false&&v.ativo!=='false').map(v=>`<option value="${v.id}"${v.id===cur?' selected':''}>${v.nome}</option>`).join('');
+}
+
+function renderVendedores(){
+  const tbody=document.getElementById('vend-tbody');
+  if(!vendedores.length){ tbody.innerHTML='<tr><td colspan="9"><div class="empty"><div class="empty-icon">👤</div><p>Nenhum vendedor cadastrado.</p></div></td></tr>'; return; }
+  tbody.innerHTML=vendedores.map(v=>{
+    const vendasV=sales.filter(s=>s.vendedorId===v.id);
+    const totalComissao=vendasV.reduce((a,s)=>a+(s.comissaoVendedor||0),0);
+    const ativo=v.ativo!==false&&v.ativo!=='false';
+    return `<tr>
+      <td><strong>${v.nome}</strong></td>
+      <td style="font-size:12px">${v.cpf||'—'}</td>
+      <td style="font-size:12px">${v.telefone||'—'}</td>
+      <td style="font-size:12px">${v.email||'—'}</td>
+      <td><span class="chip chip-ok">${v.comissao||0}%</span></td>
+      <td>${vendasV.length}</td>
+      <td style="color:var(--warn);font-weight:700">${fmtBRL(totalComissao)}</td>
+      <td><span class="chip ${ativo?'chip-ok':'chip-gray'}">${ativo?'Ativo':'Inativo'}</span></td>
+      <td>
+        <button class="icon-btn" onclick="openVendedorModal('${v.id}')">✏️</button>
+        <button class="icon-btn" onclick="deleteVendedor('${v.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+let editVendId=null;
+function openVendedorModal(id){
+  editVendId=id||null;
+  const v=id?vendedores.find(x=>x.id===id):null;
+  document.getElementById('mvend-title').textContent=v?'Editar vendedor':'Novo vendedor';
+  document.getElementById('v-nome').value=v?.nome||'';
+  document.getElementById('v-cpf').value=v?.cpf||'';
+  document.getElementById('v-tel').value=v?.telefone||'';
+  document.getElementById('v-email').value=v?.email||'';
+  document.getElementById('v-endereco').value=v?.endereco||'';
+  document.getElementById('v-comissao').value=v?.comissao||'';
+  document.getElementById('v-ativo').value=v?.ativo===false||v?.ativo==='false'?'false':'true';
+  document.getElementById('v-obs').value=v?.obs||'';
+  document.getElementById('modal-vendedor').classList.remove('hidden');
+}
+function closeVendedorModal(){ document.getElementById('modal-vendedor').classList.add('hidden'); }
+
+async function saveVendedor(){
+  const nome=document.getElementById('v-nome').value.trim();
+  if(!nome){ toast('Informe o nome do vendedor',true); return; }
+  const data={
+    nome, cpf:document.getElementById('v-cpf').value.trim(),
+    telefone:document.getElementById('v-tel').value.trim(),
+    email:document.getElementById('v-email').value.trim(),
+    endereco:document.getElementById('v-endereco').value.trim(),
+    comissao:parseFloat(document.getElementById('v-comissao').value)||0,
+    ativo:document.getElementById('v-ativo').value==='true',
+    obs:document.getElementById('v-obs').value.trim(),
+  };
+  spinner(true);
+  try{
+    if(editVendId){
+      const r=await apiFetch('/api/vendedores/'+editVendId,{method:'PUT',body:JSON.stringify(data)});
+      if(r.error) throw new Error(r.error);
+      vendedores=vendedores.map(v=>v.id===editVendId?r:v);
+      toast('Vendedor atualizado!');
+    }else{
+      const r=await apiFetch('/api/vendedores',{method:'POST',body:JSON.stringify(data)});
+      if(r.error) throw new Error(r.error);
+      vendedores.push(r);
+      toast('Vendedor cadastrado!');
+    }
+    closeVendedorModal(); renderVendedores();
+  }catch(e){ toast('Erro: '+e.message,true); }
+  spinner(false);
+}
+
+async function deleteVendedor(id){
+  if(!confirm('Excluir este vendedor?')) return;
+  spinner(true);
+  await apiFetch('/api/vendedores/'+id,{method:'DELETE'});
+  vendedores=vendedores.filter(v=>v.id!==id);
+  spinner(false); renderVendedores(); toast('Vendedor removido');
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
