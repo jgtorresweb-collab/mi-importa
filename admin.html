@@ -1305,7 +1305,12 @@ function sortProd(col){
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-loadAll();
+// Mostrar loading enquanto dados chegam
+document.getElementById('stat-grid').innerHTML='<div style="color:var(--mu);padding:20px;font-size:14px">⏳ Carregando dados...</div>';
+
+loadAll().then(()=>{
+  renderDashboard();
+});
 setInterval(loadAll, 15000);
 </script>
 </body>
