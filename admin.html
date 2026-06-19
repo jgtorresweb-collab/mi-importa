@@ -948,6 +948,16 @@ async function deleteImporter(id){
 }
 
 // ── VENDAS ────────────────────────────────────────────────────────────────────
+function saleStatus(s){
+  const isPago=i=>i.pago===true||i.pago==='true';
+  const overdue=s.installments?.some(i=>!isPago(i)&&isOverdue(i.vencimento));
+  const allPaid=!s.installments?.length||s.installments?.every(i=>isPago(i));
+  if(s.pagto==='avista') return '<span class="chip chip-ok">Pago</span>';
+  if(allPaid) return '<span class="chip chip-ok">Quitado</span>';
+  if(overdue) return '<span class="chip chip-danger">Vencida</span>';
+  return '<span class="chip chip-warn">Em aberto</span>';
+}
+
 function limparFiltrosVenda(){
   document.getElementById('venda-search').value='';
   document.getElementById('venda-importador').value='';
