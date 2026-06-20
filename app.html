@@ -62,6 +62,11 @@ main{max-width:1000px;margin:0 auto;padding:18px 12px;}
 @media(max-width:500px){.form-grid{grid-template-columns:1fr;}}
 .field{display:flex;flex-direction:column;gap:4px;}
 .field.full{grid-column:1/-1;}
+.foto-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;}
+.foto-item{position:relative;aspect-ratio:1;background:var(--s2);border-radius:8px;overflow:hidden;border:1px solid var(--b);}
+.foto-item img{width:100%;height:100%;object-fit:cover;}
+.foto-remove{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.75);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;}
+.foto-add{display:flex;align-items:center;justify-content:center;aspect-ratio:1;background:var(--s2);border-radius:8px;border:2px dashed var(--b);cursor:pointer;color:var(--mu);font-size:22px;}
 label{font-size:12px;color:var(--mu);}
 input,select{background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:9px 11px;font-family:var(--font);font-size:13px;width:100%;}
 input:focus,select:focus{outline:none;border-color:#b8860b;}
@@ -96,6 +101,7 @@ td{padding:10px 11px;border-bottom:1px solid var(--b);vertical-align:middle;}
 .chip-ok{background:#1a3d2b;color:var(--ok);}
 .chip-warn{background:#3a2a0a;color:var(--warn);}
 .chip-danger{background:#2a1010;color:var(--danger);}
+.chip-info{background:#16314a;color:#7eb6ff;}
 .inst-badge{background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;flex-wrap:wrap;gap:6px;}
 .sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
 .sec-title{font-size:18px;font-weight:700;}
@@ -126,6 +132,7 @@ td{padding:10px 11px;border-bottom:1px solid var(--b);vertical-align:middle;}
   </a>
   <button class="nav-btn active" onclick="showView('vitrine',this)">🏪 Vitrine</button>
   <button class="nav-btn" onclick="showView('minhas-vendas',this)">🧾 Minhas vendas</button>
+  <button class="nav-btn" onclick="showView('pedidos',this)">📋 Pedidos</button>
   <button class="nav-btn" onclick="showView('parcelas',this)">📅 Parcelas</button>
 </nav>
 
@@ -161,6 +168,15 @@ td{padding:10px 11px;border-bottom:1px solid var(--b);vertical-align:middle;}
         <tbody id="mv-tbody"></tbody>
       </table>
     </div>
+  </div>
+
+  <!-- PEDIDOS -->
+  <div id="view-pedidos" class="view">
+    <div class="sec-header" style="display:flex;justify-content:space-between;align-items:center">
+      <span class="sec-title">Pedidos / Encomendas</span>
+      <button class="btn" onclick="openPedidoModalApp()">+ Novo</button>
+    </div>
+    <div id="ped-list-app"></div>
   </div>
 
   <!-- PARCELAS -->
@@ -289,13 +305,51 @@ td{padding:10px 11px;border-bottom:1px solid var(--b);vertical-align:middle;}
   </div>
 </div>
 
+<!-- MODAL PEDIDO (cadastro/edição) -->
+<div class="overlay hidden" id="modal-pedido-app">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="pa-title">Novo pedido</span>
+      <button onclick="closePedidoModalApp()" style="background:none;border:none;color:var(--mu);font-size:22px;cursor:pointer">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="field full"><label>Nome do cliente *</label><input type="text" id="pa-cliente" placeholder="Ex: Maria Souza"></div>
+      <div class="field"><label>Telefone</label><input type="tel" id="pa-tel" placeholder="(21) 99999-9999"></div>
+      <div class="field"><label>Data do pedido</label><input type="date" id="pa-data"></div>
+      <div class="field full"><label>Produto / item desejado *</label><input type="text" id="pa-produto" placeholder="Ex: Bolsa Michael Kors preta"></div>
+      <div class="field"><label>Quantidade</label><input type="number" id="pa-qtd" min="1" value="1"></div>
+      <div class="field"><label>Valor estimado (R$)</label><input type="number" id="pa-valor" step="0.01" placeholder="0,00"></div>
+      <div class="field full"><label>Link de referência</label><input type="url" id="pa-link" placeholder="https://..."></div>
+      <div class="field full">
+        <label>Fotos de referência (até 6)</label>
+        <div id="pa-foto-grid" class="foto-grid"></div>
+        <input type="file" id="pa-foto-file" accept="image/*" multiple style="display:none" onchange="uploadFotosPedidoApp(this)">
+        <div id="pa-foto-status" style="font-size:11px;margin-top:6px;color:var(--mu)"></div>
+      </div>
+      <div class="field full"><label>Status</label>
+        <select id="pa-status">
+          <option value="pendente">Pendente</option>
+          <option value="andamento">Em andamento</option>
+          <option value="concluido">Concluído</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </div>
+      <div class="field full"><label>Observações</label><textarea id="pa-obs" placeholder="Detalhes, cor, tamanho, prazo combinado..."></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sec" onclick="closePedidoModalApp()">Cancelar</button>
+      <button class="btn" onclick="savePedidoApp()">Salvar pedido</button>
+    </div>
+  </div>
+</div>
+
 <div id="spinner" class="hidden"><div class="spin"></div></div>
 
 <div id="toast"></div>
 
 <script>
 const API='';
-let products=[], sales=[], vendedores=[];
+let products=[], sales=[], vendedores=[], pedidos=[];
 let sortMode='none', buyingId=null, buyQty=1;
 let carFotos=[], carIdx=0;
 
@@ -316,10 +370,14 @@ function estoqueDisponivel(p) {
 
 async function load(){
   try{
-    [products,sales]=await Promise.all([
+    [products,sales,vendedores,pedidos]=await Promise.all([
       fetch(API+'/api/products').then(r=>r.json()),
-      fetch(API+'/api/sales').then(r=>r.json())
+      fetch(API+'/api/sales').then(r=>r.json()),
+      fetch(API+'/api/vendedores').then(r=>r.json()).catch(()=>[]),
+      fetch(API+'/api/pedidos').then(r=>r.json()).catch(()=>[])
     ]);
+    vendedores=Array.isArray(vendedores)?vendedores:[];
+    pedidos=Array.isArray(pedidos)?pedidos:[];
     refresh();
   }catch(e){console.error(e);}
 }
@@ -328,6 +386,7 @@ function refresh(){
   const id=document.querySelector('.view.active')?.id?.replace('view-','');
   if(id==='vitrine') renderVitrine();
   if(id==='minhas-vendas') renderMinhasVendas();
+  if(id==='pedidos') renderPedidosApp();
   if(id==='parcelas') renderParcelas();
 }
 
@@ -543,6 +602,144 @@ function renderMinhasVendas(){
   }).join('');
 }
 
+// ── PEDIDOS (app vendedores) ─────────────────────────────────────────────────
+function pedStatusChipApp(st){
+  const map={
+    pendente:  {cls:'chip-warn',  label:'Pendente'},
+    andamento: {cls:'chip-info',  label:'Em andamento'},
+    concluido: {cls:'chip-ok',    label:'Concluído'},
+    cancelado: {cls:'chip-danger',label:'Cancelado'},
+  };
+  const m=map[st]||map.pendente;
+  return `<span class="chip ${m.cls}">${m.label}</span>`;
+}
+
+function renderPedidosApp(){
+  const el=document.getElementById('ped-list-app');
+  if(!pedidos.length){ el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>Nenhum pedido cadastrado ainda.</p></div>'; return; }
+
+  const list=[...pedidos].sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
+  el.innerHTML=list.map(p=>{
+    const fotos=p.fotos||[];
+    return `<div style="background:var(--s1);border:1px solid var(--b);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+        <div>
+          <strong style="font-size:15px">${p.cliente}</strong>
+          ${p.tel?`<div style="font-size:12px;color:var(--mu)">${p.tel}</div>`:''}
+        </div>
+        ${pedStatusChipApp(p.status)}
+      </div>
+      <div style="margin-top:8px;font-size:13px">
+        <strong>${p.produto}</strong> ${p.qtd>1?`· qtd ${p.qtd}`:''}
+        ${p.valor?` · <span style="color:var(--ac);font-weight:700">${fmtBRL(p.valor)}</span>`:''}
+      </div>
+      ${p.obs?`<div style="font-size:12px;color:var(--mu);margin-top:4px">${p.obs}</div>`:''}
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--mu)">📅 ${fmtDate(p.created_at)}</span>
+        ${fotos.length?`<button class="qty-btn" style="width:auto;padding:0 10px;font-size:12px" onclick="verFotosPedidoApp('${p.id}')">🖼️ ${fotos.length} foto(s)</button>`:''}
+        ${p.link?`<a href="${p.link}" target="_blank" rel="noopener" class="qty-btn" style="width:auto;padding:0 10px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center">🔗 Link</a>`:''}
+        <button class="qty-btn" style="width:auto;padding:0 10px;font-size:12px;margin-left:auto" onclick="openPedidoModalApp('${p.id}')">✏️ Editar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function verFotosPedidoApp(id){
+  const p=pedidos.find(x=>x.id===id); if(!p||!p.fotos?.length) return;
+  const html=p.fotos.map(url=>`<img src="${url}" style="width:100%;border-radius:8px;margin-bottom:8px" onerror="this.style.display='none'">`).join('');
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Fotos — ${p.cliente}</title>
+  <style>body{font-family:Arial,sans-serif;background:#111;padding:16px;color:#fff}h2{font-size:15px;margin-bottom:12px}</style>
+  </head><body><h2>📋 ${p.produto} — ${p.cliente}</h2>${html}</body></html>`);
+  win.document.close();
+}
+
+let editPedidoIdApp=null;
+let fotosAtuaisPedidoApp=[];
+function openPedidoModalApp(id){
+  editPedidoIdApp=id||null;
+  const p=id?pedidos.find(x=>x.id===id):null;
+  document.getElementById('pa-title').textContent=p?'Editar pedido':'Novo pedido';
+  document.getElementById('pa-cliente').value=p?.cliente||'';
+  document.getElementById('pa-tel').value=p?.tel||'';
+  document.getElementById('pa-data').value=p?.created_at||today();
+  document.getElementById('pa-produto').value=p?.produto||'';
+  document.getElementById('pa-qtd').value=p?.qtd||1;
+  document.getElementById('pa-valor').value=p?.valor||'';
+  document.getElementById('pa-link').value=p?.link||'';
+  document.getElementById('pa-status').value=p?.status||'pendente';
+  document.getElementById('pa-obs').value=p?.obs||'';
+  fotosAtuaisPedidoApp=[...(p?.fotos||[])];
+  document.getElementById('pa-foto-status').textContent='';
+  document.getElementById('pa-foto-file').value='';
+  renderFotoGridPedidoApp();
+  document.getElementById('modal-pedido-app').classList.remove('hidden');
+}
+function closePedidoModalApp(){ document.getElementById('modal-pedido-app').classList.add('hidden'); }
+
+function renderFotoGridPedidoApp(){
+  const grid=document.getElementById('pa-foto-grid');
+  grid.innerHTML=fotosAtuaisPedidoApp.map((url,i)=>`
+    <div class="foto-item">
+      <img src="${url}" onerror="this.style.display='none'">
+      <button class="foto-remove" onclick="event.stopPropagation();removeFotoPedidoApp(${i})">×</button>
+    </div>`).join('')+(fotosAtuaisPedidoApp.length<6?`<div class="foto-add" onclick="document.getElementById('pa-foto-file').click()">+</div>`:'');
+}
+function removeFotoPedidoApp(i){ fotosAtuaisPedidoApp.splice(i,1); renderFotoGridPedidoApp(); }
+
+async function uploadFotosPedidoApp(input){
+  const files=[...input.files].slice(0,6-fotosAtuaisPedidoApp.length);
+  if(!files.length) return;
+  const st=document.getElementById('pa-foto-status');
+  st.textContent=`⏳ Enviando ${files.length} foto(s)...`; st.style.color='var(--warn)';
+  spinner(true);
+  try{
+    const fd=new FormData();
+    files.forEach(f=>fd.append('file',f));
+    const r=await fetch(API+'/api/upload',{method:'POST',body:fd});
+    const d=await r.json();
+    if(d.ok){ fotosAtuaisPedidoApp.push(...d.urls); st.textContent=`✔ ${d.urls.length} foto(s) enviada(s)`; st.style.color='var(--ok)'; }
+    else{ st.textContent='❌ Erro no upload'; st.style.color='var(--danger)'; }
+  }catch(e){ st.textContent='❌ Erro de conexão'; st.style.color='var(--danger)'; }
+  input.value=''; spinner(false); renderFotoGridPedidoApp();
+}
+
+async function savePedidoApp(){
+  const cliente=document.getElementById('pa-cliente').value.trim();
+  const produto=document.getElementById('pa-produto').value.trim();
+  if(!cliente){ toast('Informe o nome do cliente'); return; }
+  if(!produto){ toast('Informe o produto desejado'); return; }
+
+  const data={
+    cliente,
+    tel:document.getElementById('pa-tel').value.trim(),
+    created_at:document.getElementById('pa-data').value||today(),
+    produto,
+    qtd:parseInt(document.getElementById('pa-qtd').value)||1,
+    valor:parseFloat(document.getElementById('pa-valor').value)||0,
+    link:document.getElementById('pa-link').value.trim(),
+    fotos:fotosAtuaisPedidoApp,
+    status:document.getElementById('pa-status').value,
+    obs:document.getElementById('pa-obs').value.trim(),
+  };
+
+  spinner(true);
+  try{
+    if(editPedidoIdApp){
+      const r=await fetch(API+'/api/pedidos/'+editPedidoIdApp,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json());
+      pedidos=pedidos.map(p=>p.id===editPedidoIdApp?r:p);
+      toast('✔ Pedido atualizado!');
+    }else{
+      const r=await fetch(API+'/api/pedidos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json());
+      pedidos.unshift(r);
+      toast('✔ Pedido cadastrado!');
+    }
+    closePedidoModalApp();
+    renderPedidosApp();
+  }catch(e){ toast('Erro ao salvar pedido'); }
+  spinner(false);
+}
+
 // ── EDITAR MINHA VENDA ───────────────────────────────────────────────────────
 let editMyVendaId=null;
 function openEditMyVenda(id){
@@ -620,15 +817,31 @@ async function saveEditMyVenda(){
     }
   }
 
+  // Montar lista do que mudou, para histórico
+  const novoTel=document.getElementById('emv-tel').value.trim();
+  const novaInd=document.getElementById('emv-ind').value.trim();
+  const mudancas=[];
+  if(s.comprador!==nome) mudancas.push(`Comprador: "${s.comprador}" → "${nome}"`);
+  if((s.tel||'')!==novoTel) mudancas.push(`Telefone: "${s.tel||'—'}" → "${novoTel||'—'}"`);
+  if((s.indicacao||'')!==novaInd) mudancas.push(`Indicação: "${s.indicacao||'—'}" → "${novaInd||'—'}"`);
+  if(s.pagto!==pagto) mudancas.push(`Pagamento: ${s.pagto==='avista'?'À vista':s.pagto} → ${pagto==='avista'?'À vista':pagto}`);
+
   spinner(true);
   try{
     const r=await fetch(API+'/api/sales/'+editMyVendaId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       comprador:nome,
-      indicacao:document.getElementById('emv-ind').value.trim(),
-      tel:document.getElementById('emv-tel').value.trim(),
+      indicacao:novaInd,
+      tel:novoTel,
       pagto, installments,
     })}).then(r=>r.json());
     sales=sales.map(x=>x.id===editMyVendaId?r:x);
+    if(mudancas.length){
+      try{
+        await fetch(API+'/api/historico',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+          saleId:editMyVendaId, mudancas, autor:s.vendedorNome?('Vendedor: '+s.vendedorNome):'Vendedor (app)', data:new Date().toISOString()
+        })});
+      }catch(e){ console.error('Erro ao registrar histórico:',e); }
+    }
     closeEditMyVenda();
     renderMinhasVendas();
     toast('✔ Venda atualizada!');

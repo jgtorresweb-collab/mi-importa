@@ -264,6 +264,27 @@ const server = http.createServer(async (req, res) => {
     return json(res, { ok: true });
   }
 
+  // ── HISTÓRICO DE ALTERAÇÕES DE VENDA ─────────────────────────────────────
+  if (method==='GET' && url.startsWith('/api/historico/')) {
+    const saleId = url.split('/').pop();
+    const { data, error } = await supabase.from('historico').select('*').eq('saleId', saleId).order('data', { ascending: true });
+    if (error) return json(res, { error: error.message }, 500);
+    const fixed = (data || []).map(h => ({
+      ...h,
+      mudancas: Array.isArray(h.mudancas) ? h.mudancas :
+        (typeof h.mudancas === 'string' ? JSON.parse(h.mudancas || '[]') : [])
+    }));
+    return json(res, fixed);
+  }
+
+  if (method==='POST' && url==='/api/historico') {
+    const body = JSON.parse((await readBody(req)).toString());
+    body.id = uid();
+    const { data, error } = await supabase.from('historico').insert([body]).select().single();
+    if (error) return json(res, { error: error.message }, 500);
+    return json(res, data, 201);
+  }
+
   // ── UPLOAD FOTO → Supabase Storage ────────────────────────────────────────
   if (method==='POST' && url==='/api/upload') {
     const body = await readBody(req);
