@@ -150,9 +150,10 @@ textarea{resize:vertical;min-height:70px;}
     <span class="sep">Operacional</span>
     <a href="#" onclick="showView('vendas',this)">🧾 Vendas</a>
     <a href="#" onclick="showView('parcelas',this)">📅 Parcelas</a>
+    <a href="#" onclick="showView('pedidos',this)">📋 Pedidos</a>
     <span class="sep">Relatórios</span>
     <a href="#" onclick="showView('relatorios',this)">📈 Relatórios</a>
-    <a href="#" onclick="showView('encalhados',this)">⚠ Encalhados</a>
+    <a href="#" onclick="showView('encalhados',this)">📦 Em Estoque</a>
   </nav>
   <div class="server-badge">
     <span class="dot" id="srv-dot"></span>
@@ -394,6 +395,34 @@ textarea{resize:vertical;min-height:70px;}
       </div>
     </div>
 
+    <!-- PEDIDOS -->
+    <div id="view-pedidos" class="view">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;justify-content:space-between">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input type="text" id="ped-search" placeholder="🔍 Buscar cliente ou produto..." oninput="renderPedidos()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:220px">
+          <select id="ped-status" onchange="renderPedidos()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
+            <option value="">Todos os status</option>
+            <option value="pendente">Pendente</option>
+            <option value="andamento">Em andamento</option>
+            <option value="concluido">Concluído</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+        <button class="btn" onclick="openPedidoModal()">+ Novo pedido</button>
+      </div>
+      <div class="card">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Cliente</th><th>Telefone</th><th>Produto desejado</th><th>Qtd</th>
+              <th>Valor estimado</th><th>Ref.</th><th>Data pedido</th><th>Status</th><th>Obs</th><th></th>
+            </tr></thead>
+            <tbody id="ped-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ENCALHADOS -->
     <div id="view-encalhados" class="view">
       <div class="card">
@@ -575,13 +604,51 @@ textarea{resize:vertical;min-height:70px;}
   </div>
 </div>
 
+<!-- MODAL PEDIDO -->
+<div class="overlay hidden" id="modal-pedido">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-title">
+      <span id="mped-title">Novo pedido</span>
+      <button class="icon-btn" onclick="closePedidoModal()" style="font-size:20px">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="field full"><label>Nome do cliente *</label><input type="text" id="ped-cliente" placeholder="Ex: Maria Souza"></div>
+      <div class="field"><label>Telefone</label><input type="tel" id="ped-tel" placeholder="(21) 99999-9999"></div>
+      <div class="field"><label>Data do pedido</label><input type="date" id="ped-data"></div>
+      <div class="field full"><label>Produto / item desejado *</label><input type="text" id="ped-produto" placeholder="Ex: Bolsa Michael Kors preta"></div>
+      <div class="field"><label>Quantidade</label><input type="number" id="ped-qtd" min="1" value="1"></div>
+      <div class="field"><label>Valor estimado (R$)</label><input type="number" id="ped-valor" step="0.01" placeholder="0,00"></div>
+      <div class="field full"><label>Link de referência</label><input type="url" id="ped-link" placeholder="https://..."></div>
+      <div class="field full">
+        <label>Fotos de referência (até 6)</label>
+        <div id="ped-foto-grid" class="foto-grid"></div>
+        <input type="file" id="ped-foto-file" accept="image/*" multiple style="display:none" onchange="uploadFotosPedido(this)">
+        <div id="ped-foto-status" style="font-size:11px;margin-top:6px;color:var(--mu)"></div>
+      </div>
+      <div class="field full"><label>Status</label>
+        <select id="ped-status-field">
+          <option value="pendente">Pendente</option>
+          <option value="andamento">Em andamento</option>
+          <option value="concluido">Concluído</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </div>
+      <div class="field full"><label>Observações</label><textarea id="ped-obs" placeholder="Detalhes, cor, tamanho, prazo combinado..."></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sec" onclick="closePedidoModal()">Cancelar</button>
+      <button class="btn" onclick="savePedido()">Salvar pedido</button>
+    </div>
+  </div>
+</div>
+
 <div id="spinner" class="hidden"><div class="spin"></div></div>
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
 const API = '';
-let products=[], sales=[], importers=[], vendedores=[];
+let products=[], sales=[], importers=[], vendedores=[], pedidos=[];
 let editProdId=null, editImpId=null;
 let fotosAtuais=[];
 let chartVendas=null, chartCats=null;
@@ -630,6 +697,14 @@ async function loadAll(){
     console.error('vendedores erro:',e);
     vendedores = [];
   }
+  // Carregar pedidos separado para não travar o resto
+  try{
+    const pd = await apiFetch('/api/pedidos');
+    pedidos = Array.isArray(pd) ? pd : [];
+  }catch(e){
+    console.error('pedidos erro:',e);
+    pedidos = [];
+  }
   refreshAll();
 }
 
@@ -648,7 +723,7 @@ async function checkServer(){
 checkServer(); setInterval(checkServer,8000);
 
 // ── VIEWS ─────────────────────────────────────────────────────────────────────
-const titles={dashboard:'Dashboard',produtos:'Produtos',importadores:'Importadores',vendedores:'Vendedores',vendas:'Vendas',parcelas:'Parcelas',relatorios:'Relatórios',encalhados:'Encalhados'};
+const titles={dashboard:'Dashboard',produtos:'Produtos',importadores:'Importadores',vendedores:'Vendedores',vendas:'Vendas',parcelas:'Parcelas',pedidos:'Pedidos',relatorios:'Relatórios',encalhados:'Em Estoque'};
 function showView(name,el){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
@@ -666,6 +741,7 @@ function refreshView(name){
   if(name==='vendedores')   renderVendedores();
   if(name==='vendas')       { renderVendas(); }
   if(name==='parcelas')     renderParcelas();
+  if(name==='pedidos')      renderPedidos();
   if(name==='relatorios')   renderRelatorios();
   if(name==='encalhados')   renderEncalhados();
 }
@@ -745,6 +821,7 @@ function renderDashboard(){
     return acc+(cr*estoqueDisp(p));
   },0);
   const qtdEstoque=prodsFiltrados.reduce((acc,p)=>acc+estoqueDisp(p),0);
+  const qtdVendida=salesFiltradas.reduce((acc,s)=>acc+(s.qty||1),0);
 
   if(!document.getElementById('stat-grid')) return;
   document.getElementById('stat-grid').innerHTML=`
@@ -752,10 +829,11 @@ function renderDashboard(){
     <div class="stat"><div class="stat-label">Lucro estimado</div><div class="stat-val">${fmtBRL(lucro)}</div><div class="stat-sub">margem: ${fat?((lucro/fat)*100).toFixed(1):0}%</div></div>
     <div class="stat info"><div class="stat-label">Estoque · valor venda</div><div class="stat-val" style="font-size:19px">${fmtBRL(valorEstoqueVenda)}</div><div class="stat-sub">${qtdEstoque} unidade${qtdEstoque!==1?'s':''} disponíve${qtdEstoque!==1?'is':'l'}</div></div>
     <div class="stat info"><div class="stat-label">Estoque · valor custo</div><div class="stat-val" style="font-size:19px">${fmtBRL(valorEstoqueCusto)}</div><div class="stat-sub">capital investido em estoque</div></div>
+    <div class="stat"><div class="stat-label">Produtos vendidos</div><div class="stat-val">${qtdVendida}</div><div class="stat-sub">unidade${qtdVendida!==1?'s':''} em ${salesFiltradas.length} venda(s)</div></div>
     <div class="stat info"><div class="stat-label">Ticket médio</div><div class="stat-val">${fmtBRL(ticket)}</div></div>
     <div class="stat warn"><div class="stat-label">Comissões pagas</div><div class="stat-val">${fmtBRL(comissoes)}</div></div>
     <div class="stat danger"><div class="stat-label">Parcelas vencidas</div><div class="stat-val">${pv}</div></div>
-    <div class="stat warn"><div class="stat-label">Produtos encalhados</div><div class="stat-val">${enc.length}</div></div>
+    <div class="stat warn"><div class="stat-label">Em Estoque</div><div class="stat-val">${enc.length}</div></div>
     <div class="stat"><div class="stat-label">Total de produtos</div><div class="stat-val">${prodsFiltrados.length}</div><div class="stat-sub">${prodsFiltrados.filter(p=>!isSoldOut(p)).length} disponíveis</div></div>
     <div class="stat"><div class="stat-label">Importadores</div><div class="stat-val">${filtImp?1:importers.length}</div></div>
   `;
@@ -1423,22 +1501,27 @@ function renderParcelas(){
   renderInstList(pagas,'parc-pagas','var(--ok)',true);
 }
 
+// ── CARDS DE RESUMO MENSAL (reutilizável) ───────────────────────────────────
+function buildCardsMensais(list,corBorda,corTexto){
+  if(!list.length) return '';
+  const porMes={};
+  list.forEach(i=>{ const mes=(i.vencimento||'').slice(0,7); porMes[mes]=(porMes[mes]||0)+(i.valor||0); });
+  const meses=Object.keys(porMes).sort();
+  const nomeMes=m=>{ const[y,mo]=m.split('-'); return ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][parseInt(mo)-1]+'/'+y.slice(2); };
+  const divMeses = meses.map(m=>`
+    <div style="background:var(--s2);border:1px solid ${corBorda};border-radius:10px;padding:14px 18px;min-width:160px;">
+      <div style="font-size:11px;color:${corTexto};font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">${nomeMes(m)}</div>
+      <div style="font-size:20px;font-weight:700;color:${corTexto}">${fmtBRL(porMes[m])}</div>
+      <div style="font-size:11px;color:var(--mu);margin-top:3px">${list.filter(i=>(i.vencimento||'').startsWith(m)).length} parcela(s)</div>
+    </div>`).join('');
+  return `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">${divMeses}</div>`;
+}
+
 function renderAVencer(list){
   const el=document.getElementById('parc-avencer');
   if(!list.length){ el.innerHTML='<p style="color:var(--mu);font-size:13px;padding:12px 0">Nenhuma parcela a vencer.</p>'; return; }
 
-  // Cards de resumo por mes
-  const porMes={};
-  list.forEach(i=>{ const mes=i.vencimento.slice(0,7); porMes[mes]=(porMes[mes]||0)+(i.valor||0); });
-  const meses=Object.keys(porMes).sort();
-  const nomeMes=m=>{ const[y,mo]=m.split('-'); return ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][parseInt(mo)-1]+'/'+y.slice(2); };
-
-  const divMeses = meses.map(m=>`
-    <div style="background:var(--s2);border:1px solid #b8860b55;border-radius:10px;padding:14px 18px;min-width:160px;">
-      <div style="font-size:11px;color:#b8860b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">${nomeMes(m)}</div>
-      <div style="font-size:20px;font-weight:700;color:#ffd700">${fmtBRL(porMes[m])}</div>
-      <div style="font-size:11px;color:var(--mu);margin-top:3px">${list.filter(i=>i.vencimento.startsWith(m)).length} parcela(s)</div>
-    </div>`).join('');
+  const divMesesHTML = buildCardsMensais(list, '#b8860b55', '#ffd700');
 
   // Agrupar por comprador + data
   const grupos={};
@@ -1485,14 +1568,15 @@ function renderAVencer(list){
       </div>`;
   }).join('');
 
-  el.innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">${divMeses}</div>${divGrupos}`;
+  el.innerHTML = divMesesHTML + divGrupos;
 }
 
 
 function renderInstList(list,elId,color,paid=false){
   const el=document.getElementById(elId);
   if(!list.length){ el.innerHTML=`<p style="color:var(--mu);font-size:13px;padding:12px 0">Nenhuma parcela aqui.</p>`; return; }
-  el.innerHTML=list.map(i=>{
+  const cardsHTML = buildCardsMensais(list, color+'55', color);
+  const itensHTML = list.map(i=>{
     const isAvista = i.sale.pagto==='avista';
     const parcLabel = isAvista ? 'À vista' : `Parcela ${i.num}/${i.total}`;
     return `<div class="inst-badge">
@@ -1506,6 +1590,7 @@ function renderInstList(list,elId,color,paid=false){
     </div>
   </div>`;
   }).join('');
+  el.innerHTML = cardsHTML + itensHTML;
 }
 
 // ── RELATÓRIOS ────────────────────────────────────────────────────────────────
@@ -1825,6 +1910,165 @@ async function deleteVendedor(id){
   await apiFetch('/api/vendedores/'+id,{method:'DELETE'});
   vendedores=vendedores.filter(v=>v.id!==id);
   spinner(false); renderVendedores(); toast('Vendedor removido');
+}
+
+// ── PEDIDOS ───────────────────────────────────────────────────────────────────
+function pedStatusChip(st){
+  const map={
+    pendente:  {cls:'chip-warn',  label:'Pendente'},
+    andamento: {cls:'chip-info',  label:'Em andamento'},
+    concluido: {cls:'chip-ok',    label:'Concluído'},
+    cancelado: {cls:'chip-danger',label:'Cancelado'},
+  };
+  const m=map[st]||map.pendente;
+  return `<span class="chip ${m.cls}">${m.label}</span>`;
+}
+
+function renderPedidos(){
+  const q=(document.getElementById('ped-search')?.value||'').toLowerCase();
+  const stFilt=document.getElementById('ped-status')?.value||'';
+
+  let list=pedidos.filter(p=>{
+    const mQ=!q||(p.cliente||'').toLowerCase().includes(q)||(p.produto||'').toLowerCase().includes(q);
+    const mS=!stFilt||p.status===stFilt;
+    return mQ&&mS;
+  }).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
+
+  const tbody=document.getElementById('ped-tbody');
+  if(!list.length){ tbody.innerHTML='<tr><td colspan="10"><div class="empty"><div class="empty-icon">📋</div><p>Nenhum pedido cadastrado.</p></div></td></tr>'; return; }
+
+  tbody.innerHTML=list.map(p=>{
+    const fotos=p.fotos||[];
+    const temFoto=fotos.length>0;
+    const temLink=!!p.link;
+    let refHTML='—';
+    if(temFoto||temLink){
+      refHTML='<div style="display:flex;gap:4px;align-items:center">';
+      if(temFoto) refHTML+=`<button class="icon-btn" title="${fotos.length} foto(s)" onclick="openPedidoFotos('${p.id}')" style="font-size:14px">🖼️ ${fotos.length}</button>`;
+      if(temLink) refHTML+=`<a href="${p.link}" target="_blank" rel="noopener" class="icon-btn" title="Abrir link de referência" style="font-size:14px;text-decoration:none">🔗</a>`;
+      refHTML+='</div>';
+    }
+    return `<tr>
+    <td><strong>${p.cliente}</strong></td>
+    <td>${p.tel||'—'}</td>
+    <td>${p.produto}</td>
+    <td>${p.qtd||1}</td>
+    <td style="font-weight:700">${p.valor?fmtBRL(p.valor):'—'}</td>
+    <td>${refHTML}</td>
+    <td>${fmtDate(p.created_at)}</td>
+    <td>${pedStatusChip(p.status)}</td>
+    <td style="font-size:12px;color:var(--mu);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${(p.obs||'').replace(/"/g,'&quot;')}">${p.obs||'—'}</td>
+    <td>
+      <button class="icon-btn" title="Editar" onclick="openPedidoModal('${p.id}')">✏️</button>
+      <button class="icon-btn" title="Excluir" onclick="deletePedido('${p.id}')">🗑️</button>
+    </td>
+  </tr>`;
+  }).join('');
+}
+
+let editPedidoId=null;
+let fotosAtuaisPedido=[];
+function openPedidoModal(id){
+  editPedidoId=id||null;
+  const p=id?pedidos.find(x=>x.id===id):null;
+  document.getElementById('mped-title').textContent=p?'Editar pedido':'Novo pedido';
+  document.getElementById('ped-cliente').value=p?.cliente||'';
+  document.getElementById('ped-tel').value=p?.tel||'';
+  document.getElementById('ped-data').value=p?.created_at||today();
+  document.getElementById('ped-produto').value=p?.produto||'';
+  document.getElementById('ped-qtd').value=p?.qtd||1;
+  document.getElementById('ped-valor').value=p?.valor||'';
+  document.getElementById('ped-link').value=p?.link||'';
+  document.getElementById('ped-status-field').value=p?.status||'pendente';
+  document.getElementById('ped-obs').value=p?.obs||'';
+  fotosAtuaisPedido=[...(p?.fotos||[])];
+  document.getElementById('ped-foto-status').textContent='';
+  document.getElementById('ped-foto-file').value='';
+  renderFotoGridPedido();
+  document.getElementById('modal-pedido').classList.remove('hidden');
+}
+function closePedidoModal(){ document.getElementById('modal-pedido').classList.add('hidden'); }
+
+function renderFotoGridPedido(){
+  const grid=document.getElementById('ped-foto-grid');
+  grid.innerHTML=fotosAtuaisPedido.map((url,i)=>`
+    <div class="foto-item">
+      <img src="${url}" onerror="this.style.display='none'">
+      <button class="foto-remove" onclick="event.stopPropagation();removeFotoPedido(${i})">×</button>
+    </div>`).join('')+(fotosAtuaisPedido.length<6?`<div class="foto-add" onclick="document.getElementById('ped-foto-file').click()">+</div>`:'');
+}
+function removeFotoPedido(i){ fotosAtuaisPedido.splice(i,1); renderFotoGridPedido(); }
+
+async function uploadFotosPedido(input){
+  const files=[...input.files].slice(0,6-fotosAtuaisPedido.length);
+  if(!files.length) return;
+  const st=document.getElementById('ped-foto-status');
+  st.textContent=`⏳ Enviando ${files.length} foto(s)...`; st.style.color='var(--warn)';
+  spinner(true);
+  try{
+    const fd=new FormData();
+    files.forEach(f=>fd.append('file',f));
+    const r=await fetch('/api/upload',{method:'POST',body:fd});
+    const d=await r.json();
+    if(d.ok){ fotosAtuaisPedido.push(...d.urls); st.textContent=`✔ ${d.urls.length} foto(s) enviada(s)`; st.style.color='var(--ok)'; }
+    else{ st.textContent='❌ Erro no upload'; st.style.color='var(--danger)'; }
+  }catch(e){ st.textContent='❌ Erro de conexão'; st.style.color='var(--danger)'; }
+  input.value=''; spinner(false); renderFotoGridPedido();
+}
+
+function openPedidoFotos(id){
+  const p=pedidos.find(x=>x.id===id); if(!p||!p.fotos?.length) return;
+  const html=p.fotos.map(url=>`<img src="${url}" style="width:100%;border-radius:8px;margin-bottom:8px" onerror="this.style.display='none'">`).join('');
+  const win=window.open('','_blank','width=480,height=700');
+  win.document.write(`<!DOCTYPE html><html><head><title>Fotos do pedido — ${p.cliente}</title>
+  <style>body{font-family:Arial,sans-serif;background:#111;padding:16px;color:#fff}h2{font-size:15px;margin-bottom:12px}</style>
+  </head><body><h2>📋 ${p.produto} — ${p.cliente}</h2>${html}</body></html>`);
+  win.document.close();
+}
+
+async function savePedido(){
+  const cliente=document.getElementById('ped-cliente').value.trim();
+  const produto=document.getElementById('ped-produto').value.trim();
+  if(!cliente){ toast('Informe o nome do cliente',true); return; }
+  if(!produto){ toast('Informe o produto desejado',true); return; }
+
+  const data={
+    cliente,
+    tel:document.getElementById('ped-tel').value.trim(),
+    created_at:document.getElementById('ped-data').value||today(),
+    produto,
+    qtd:parseInt(document.getElementById('ped-qtd').value)||1,
+    valor:parseFloat(document.getElementById('ped-valor').value)||0,
+    link:document.getElementById('ped-link').value.trim(),
+    fotos:fotosAtuaisPedido,
+    status:document.getElementById('ped-status-field').value,
+    obs:document.getElementById('ped-obs').value.trim(),
+  };
+
+  spinner(true);
+  try{
+    if(editPedidoId){
+      const r=await apiFetch('/api/pedidos/'+editPedidoId,{method:'PUT',body:JSON.stringify(data)});
+      if(r.error) throw new Error(r.error);
+      pedidos=pedidos.map(p=>p.id===editPedidoId?r:p);
+      toast('Pedido atualizado!');
+    }else{
+      const r=await apiFetch('/api/pedidos',{method:'POST',body:JSON.stringify(data)});
+      if(r.error) throw new Error(r.error);
+      pedidos.unshift(r);
+      toast('Pedido cadastrado!');
+    }
+    closePedidoModal(); renderPedidos();
+  }catch(e){ toast('Erro: '+e.message,true); }
+  spinner(false);
+}
+
+async function deletePedido(id){
+  if(!confirm('Excluir este pedido?')) return;
+  spinner(true);
+  await apiFetch('/api/pedidos/'+id,{method:'DELETE'});
+  pedidos=pedidos.filter(p=>p.id!==id);
+  spinner(false); renderPedidos(); toast('Pedido removido');
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────

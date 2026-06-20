@@ -83,6 +83,7 @@ const server = http.createServer(async (req, res) => {
   if (method==='GET' && url==='/app')         return serveFile(res, 'app.html');
   if (method==='GET' && url==='/logo.png')    return serveFile(res, 'logo.png');
   if (method==='GET' && url==='/manifest.json') return serveFile(res, 'manifest.json');
+  if (method==='GET' && url==='/manifest-admin.json') return serveFile(res, 'manifest-admin.json');
 
   // ── STATUS ────────────────────────────────────────────────────────────────
   if (method==='GET' && url==='/api/status') {
@@ -190,6 +191,75 @@ const server = http.createServer(async (req, res) => {
   if (method==='DELETE' && url.startsWith('/api/importers/')) {
     const id = url.split('/').pop();
     const { error } = await supabase.from('importers').delete().eq('id', id);
+    if (error) return json(res, { error: error.message }, 500);
+    return json(res, { ok: true });
+  }
+
+  // ── VENDEDORES ────────────────────────────────────────────────────────────
+  if (method==='GET' && url==='/api/vendedores') {
+    const { data, error } = await supabase.from('vendedores').select('*').order('nome');
+    if (error) return json(res, { error: error.message }, 500);
+    return json(res, data || []);
+  }
+
+  if (method==='POST' && url==='/api/vendedores') {
+    const body = JSON.parse((await readBody(req)).toString());
+    body.id = uid();
+    const { data, error } = await supabase.from('vendedores').insert([body]).select().single();
+    if (error) return json(res, { error: error.message }, 500);
+    return json(res, data, 201);
+  }
+
+  if (method==='PUT' && url.startsWith('/api/vendedores/')) {
+    const id   = url.split('/').pop();
+    const body = JSON.parse((await readBody(req)).toString());
+    delete body.id;
+    const { data, error } = await supabase.from('vendedores').update(body).eq('id', id).select().single();
+    if (error) return json(res, { error: error.message }, 500);
+    return json(res, data);
+  }
+
+  if (method==='DELETE' && url.startsWith('/api/vendedores/')) {
+    const id = url.split('/').pop();
+    const { error } = await supabase.from('vendedores').delete().eq('id', id);
+    if (error) return json(res, { error: error.message }, 500);
+    return json(res, { ok: true });
+  }
+
+  // ── PEDIDOS ───────────────────────────────────────────────────────────────
+  if (method==='GET' && url==='/api/pedidos') {
+    const { data, error } = await supabase.from('pedidos').select('*').order('created_at', { ascending: false });
+    if (error) return json(res, { error: error.message }, 500);
+    const fixed = (data || []).map(p => ({
+      ...p,
+      fotos: Array.isArray(p.fotos) ? p.fotos :
+        (typeof p.fotos === 'string' ? JSON.parse(p.fotos || '[]') : [])
+    }));
+    return json(res, fixed);
+  }
+
+  if (method==='POST' && url==='/api/pedidos') {
+    const body = JSON.parse((await readBody(req)).toString());
+    body.id = uid();
+    const now = new Date();
+    body.created_at = now.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
+    const { data, error } = await supabase.from('pedidos').insert([body]).select().single();
+    if (error) return json(res, { error: error.message }, 500);
+    return json(res, data, 201);
+  }
+
+  if (method==='PUT' && url.startsWith('/api/pedidos/')) {
+    const id   = url.split('/').pop();
+    const body = JSON.parse((await readBody(req)).toString());
+    delete body.id;
+    const { data, error } = await supabase.from('pedidos').update(body).eq('id', id).select().single();
+    if (error) return json(res, { error: error.message }, 500);
+    return json(res, data);
+  }
+
+  if (method==='DELETE' && url.startsWith('/api/pedidos/')) {
+    const id = url.split('/').pop();
+    const { error } = await supabase.from('pedidos').delete().eq('id', id);
     if (error) return json(res, { error: error.message }, 500);
     return json(res, { ok: true });
   }
