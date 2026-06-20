@@ -500,6 +500,52 @@ textarea{resize:vertical;min-height:70px;}
   </div>
 </div>
 
+<!-- MODAL EDITAR VENDA -->
+<div class="overlay hidden" id="modal-edit-venda">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title">
+      <span>✏️ Editar venda</span>
+      <button class="icon-btn" onclick="closeEditVendaModal()" style="font-size:20px">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="field full"><label>Produto</label><div id="ev-produto-nome" style="font-weight:600;padding:8px 0"></div></div>
+      <div class="field"><label>Comprador</label><input type="text" id="ev-comprador"></div>
+      <div class="field"><label>Telefone</label><input type="text" id="ev-tel"></div>
+      <div class="field"><label>Indicação</label><input type="text" id="ev-indicacao"></div>
+      <div class="field"><label>Data da venda</label><input type="date" id="ev-data"></div>
+      <div class="field"><label>Valor do produto (R$)</label><input type="number" id="ev-valor-orig" step="0.01" oninput="evRecalcular()"></div>
+      <div class="field"><label>Desconto (R$)</label><input type="number" id="ev-desconto" step="0.01" value="0" oninput="evRecalcular()"></div>
+      <div class="field full">
+        <div style="background:var(--s2);border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;color:var(--mu)">Valor final da venda</span>
+          <strong id="ev-total-final" style="font-size:18px;color:var(--ac)">R$ 0,00</strong>
+        </div>
+      </div>
+      <div class="field"><label>Forma de pagamento</label>
+        <select id="ev-pagto" onchange="evRecalcular()">
+          <option value="avista">À vista</option>
+          <option value="2x">2x</option>
+          <option value="3x">3x</option>
+          <option value="4x">4x</option>
+          <option value="5x">5x</option>
+          <option value="6x">6x</option>
+        </select>
+      </div>
+      <div class="field" id="ev-venc-wrap"><label>1º vencimento</label><input type="date" id="ev-primeiro-venc" onchange="evRecalcular()"></div>
+      <div class="field full"><label>Vendedor responsável</label>
+        <select id="ev-vendedor" onchange="evRecalcular()">
+          <option value="">— Nenhum (sem comissão) —</option>
+        </select>
+      </div>
+      <div class="field full" id="ev-parcelas-preview"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sec" onclick="closeEditVendaModal()">Cancelar</button>
+      <button class="btn" onclick="saveEditVenda()">💾 Salvar alterações</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL VENDEDOR -->
 <div class="overlay hidden" id="modal-vendedor">
   <div class="modal" style="max-width:520px">
@@ -1124,8 +1170,9 @@ function renderVendas(){
     <td>${fmtDate(s.date)}</td>
     <td>${saleStatus(s)}</td>
     <td>
-      <button class="icon-btn" onclick="openVendaModal('${s.id}')">👁️</button>
-      <button class="icon-btn" onclick="deleteSale('${s.id}')">🗑️</button>
+      <button class="icon-btn" title="Ver detalhes" onclick="openVendaModal('${s.id}')">👁️</button>
+      <button class="icon-btn" title="Editar venda" onclick="openEditVendaModal('${s.id}')">✏️</button>
+      <button class="icon-btn" title="Excluir" onclick="deleteSale('${s.id}')">🗑️</button>
     </td>
   </tr>`).join('');
 }
@@ -1166,6 +1213,144 @@ async function deleteSale(id){
   await apiFetch('/api/sales/'+id,{method:'DELETE'});
   sales=sales.filter(s=>s.id!==id);
   renderVendas(); renderDashboard(); toast('Venda removida');
+}
+
+// ── EDITAR VENDA ─────────────────────────────────────────────────────────────
+let editVendaId=null;
+function openEditVendaModal(id){
+  const s=sales.find(x=>x.id===id); if(!s) return;
+  editVendaId=id;
+
+  document.getElementById('ev-produto-nome').textContent=s.productName;
+  document.getElementById('ev-comprador').value=s.comprador||'';
+  document.getElementById('ev-tel').value=s.tel||'';
+  document.getElementById('ev-indicacao').value=s.indicacao||'';
+  document.getElementById('ev-data').value=s.date||today();
+
+  // Valor original = soma das parcelas ainda não pagas + pagas, ou productPreco se à vista
+  const valorAtual = s.totalVenda || s.productPreco || 0;
+  document.getElementById('ev-valor-orig').value = valorAtual.toFixed(2);
+  document.getElementById('ev-desconto').value = '0';
+  document.getElementById('ev-pagto').value = s.pagto || 'avista';
+
+  // Popular vendedores
+  const vSel=document.getElementById('ev-vendedor');
+  vSel.innerHTML='<option value="">— Nenhum (sem comissão) —</option>'
+    +vendedores.filter(v=>v.ativo!==false&&v.ativo!=='false').map(v=>`<option value="${v.id}|${v.nome}|${v.comissao||0}"${v.id===s.vendedorId?' selected':''}>${v.nome} (${v.comissao||0}% comissão)</option>`).join('');
+
+  // 1º vencimento: usar a primeira parcela não paga existente, ou amanhã+30
+  const primeiraParc = (s.installments||[]).find(i=>true);
+  document.getElementById('ev-primeiro-venc').value = primeiraParc?.vencimento || addDaysISO(s.date||today(),30);
+
+  evRecalcular();
+  document.getElementById('modal-edit-venda').classList.remove('hidden');
+}
+function closeEditVendaModal(){ document.getElementById('modal-edit-venda').classList.add('hidden'); }
+
+function addDaysISO(dateStr,days){
+  const d=new Date(dateStr+'T12:00:00');
+  d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
+}
+function addMonthsISO(dateStr,months){
+  const d=new Date(dateStr+'T12:00:00');
+  d.setMonth(d.getMonth()+months);
+  return d.toISOString().slice(0,10);
+}
+
+function evRecalcular(){
+  const valorOrig=parseFloat(document.getElementById('ev-valor-orig').value)||0;
+  const desconto=parseFloat(document.getElementById('ev-desconto').value)||0;
+  const totalFinal=Math.max(0,valorOrig-desconto);
+  document.getElementById('ev-total-final').textContent=fmtBRL(totalFinal);
+
+  const pagto=document.getElementById('ev-pagto').value;
+  const vencWrap=document.getElementById('ev-venc-wrap');
+  vencWrap.style.display = pagto==='avista' ? 'none' : '';
+
+  // Preview de parcelas
+  const previewEl=document.getElementById('ev-parcelas-preview');
+  if(pagto==='avista'){
+    previewEl.innerHTML='';
+  }else{
+    const n=parseInt(pagto);
+    const primeiroVenc=document.getElementById('ev-primeiro-venc').value||addDaysISO(today(),30);
+    const valorParc=totalFinal/n;
+    let html='<label style="font-size:11px;color:var(--mu);display:block;margin-bottom:6px">Prévia das parcelas</label>';
+    for(let i=0;i<n;i++){
+      const venc=addMonthsISO(primeiroVenc,i);
+      html+=`<div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--s2);border-radius:6px;margin-bottom:4px;font-size:13px">
+        <span>Parcela ${i+1}/${n} · ${fmtDate(venc)}</span>
+        <strong>${fmtBRL(valorParc)}</strong>
+      </div>`;
+    }
+    previewEl.innerHTML=html;
+  }
+
+  // Mostrar comissão calculada (se houver vendedor selecionado, recalculada no preview)
+}
+
+async function saveEditVenda(){
+  const s=sales.find(x=>x.id===editVendaId); if(!s) return;
+
+  const valorOrig=parseFloat(document.getElementById('ev-valor-orig').value)||0;
+  const desconto=parseFloat(document.getElementById('ev-desconto').value)||0;
+  const totalFinal=Math.max(0,valorOrig-desconto);
+  const pagto=document.getElementById('ev-pagto').value;
+  const comprador=document.getElementById('ev-comprador').value.trim();
+
+  if(!comprador){ toast('Informe o nome do comprador',true); return; }
+
+  // Recalcular installments preservando o que já foi pago, quando possível
+  let installments=[];
+  if(pagto!=='avista'){
+    const n=parseInt(pagto);
+    const primeiroVenc=document.getElementById('ev-primeiro-venc').value||addDaysISO(today(),30);
+    const valorParc=totalFinal/n;
+    const isPagoOld=i=>i.pago===true||i.pago==='true';
+    for(let i=0;i<n;i++){
+      const old=(s.installments||[])[i];
+      installments.push({
+        num:i+1, total:n,
+        valor:valorParc,
+        vencimento: i===0?primeiroVenc:addMonthsISO(primeiroVenc,i),
+        pago: old?isPagoOld(old):false
+      });
+    }
+  }
+
+  const vendVal=document.getElementById('ev-vendedor').value;
+  const vendParts=vendVal?vendVal.split('|'):['','',0];
+  const vendedorId=vendParts[0]||'';
+  const vendedorNome=vendParts[1]||'';
+  const vendedorPct=parseFloat(vendParts[2])||0;
+  const comissaoVendedor=vendedorId?parseFloat(((totalFinal*vendedorPct)/100).toFixed(2)):0;
+
+  const data={
+    ...s,
+    comprador,
+    tel:document.getElementById('ev-tel').value.trim(),
+    indicacao:document.getElementById('ev-indicacao').value.trim(),
+    date:document.getElementById('ev-data').value,
+    pagto,
+    totalVenda:totalFinal,
+    productPreco: pagto==='avista'?totalFinal:s.productPreco,
+    installments,
+    vendedorId, vendedorNome, comissaoVendedor,
+  };
+
+  spinner(true);
+  try{
+    const r=await apiFetch('/api/sales/'+editVendaId,{method:'PUT',body:JSON.stringify(data)});
+    if(r.error) throw new Error(r.error);
+    sales=sales.map(x=>x.id===editVendaId?r:x);
+    closeEditVendaModal();
+    renderVendas(); renderDashboard();
+    toast('Venda atualizada com sucesso!');
+  }catch(e){
+    toast('Erro ao salvar: '+e.message,true);
+  }
+  spinner(false);
 }
 async function markPaid(saleId,num){
   const s=sales.find(x=>x.id===saleId); if(!s) return;

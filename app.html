@@ -157,7 +157,7 @@ td{padding:10px 11px;border-bottom:1px solid var(--b);vertical-align:middle;}
     <div class="sec-header"><span class="sec-title">Minhas vendas</span></div>
     <div class="tbl-wrap">
       <table>
-        <thead><tr><th>Produto</th><th>Comprador</th><th>Qtd</th><th>Pagamento</th><th>Valor</th><th>Data</th><th>Status</th></tr></thead>
+        <thead><tr><th>Produto</th><th>Comprador</th><th>Qtd</th><th>Pagamento</th><th>Valor</th><th>Data</th><th>Status</th><th></th></tr></thead>
         <tbody id="mv-tbody"></tbody>
       </table>
     </div>
@@ -253,7 +253,44 @@ td{padding:10px 11px;border-bottom:1px solid var(--b);vertical-align:middle;}
   </div>
 </div>
 
+<!-- MODAL EDITAR MINHA VENDA -->
+<div class="overlay hidden" id="modal-edit-myvenda">
+  <div class="modal">
+    <div class="modal-title">
+      <span>✏️ Editar venda</span>
+      <button onclick="closeEditMyVenda()" style="background:none;border:none;color:var(--mu);font-size:22px;cursor:pointer">×</button>
+    </div>
+    <div class="prod-info-box" id="emv-prod-info"></div>
+    <div class="form-grid">
+      <div class="field full"><label>Nome do comprador *</label><input type="text" id="emv-nome"></div>
+      <div class="field"><label>Indicação</label><input type="text" id="emv-ind"></div>
+      <div class="field">
+        <label>Telefone</label>
+        <input type="tel" id="emv-tel">
+      </div>
+      <div class="field full"><label>Forma de pagamento *</label>
+        <select id="emv-pagto" onchange="emvToggleParcelas()">
+          <option value="avista">À vista</option>
+          <option value="2x">2x</option>
+          <option value="3x">3x</option>
+          <option value="4x">4x</option>
+        </select>
+      </div>
+      <div class="field full" id="emv-inst-wrap" style="display:none">
+        <label>Data do 1º vencimento</label>
+        <input type="date" id="emv-venc" oninput="emvPreview()">
+      </div>
+      <div class="field full" id="emv-preview"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sec" onclick="closeEditMyVenda()">Cancelar</button>
+      <button class="btn" onclick="saveEditMyVenda()">Salvar alterações</button>
+    </div>
+  </div>
+</div>
+
 <div id="spinner" class="hidden"><div class="spin"></div></div>
+
 <div id="toast"></div>
 
 <script>
@@ -501,8 +538,102 @@ function renderMinhasVendas(){
       <td style="font-weight:700">${fmtBRL(s.totalVenda||s.productPreco)}</td>
       <td>${fmtDate(s.date)}</td>
       <td>${st}</td>
+      <td><button class="qty-btn" style="width:auto;padding:0 10px;font-size:13px" onclick="openEditMyVenda('${s.id}')" title="Editar venda">✏️</button></td>
     </tr>`;
   }).join('');
+}
+
+// ── EDITAR MINHA VENDA ───────────────────────────────────────────────────────
+let editMyVendaId=null;
+function openEditMyVenda(id){
+  const s=sales.find(x=>x.id===id); if(!s) return;
+  editMyVendaId=id;
+  const p=products.find(x=>x.id===s.productId);
+
+  document.getElementById('emv-prod-info').innerHTML=`
+    <div>
+      <div class="name">${s.productName}</div>
+      <div class="price">${fmtBRL(s.totalVenda||s.productPreco)}</div>
+      <div class="stock">Qtd vendida: ${s.qty||1}</div>
+    </div>`;
+
+  document.getElementById('emv-nome').value=s.comprador||'';
+  document.getElementById('emv-ind').value=s.indicacao||'';
+  document.getElementById('emv-tel').value=s.tel||'';
+  document.getElementById('emv-pagto').value=s.pagto||'avista';
+
+  const primeiraParc=(s.installments||[])[0];
+  document.getElementById('emv-venc').value=primeiraParc?.vencimento||addMonths(s.date||today(),1);
+
+  emvToggleParcelas();
+  document.getElementById('modal-edit-myvenda').classList.remove('hidden');
+}
+function closeEditMyVenda(){ document.getElementById('modal-edit-myvenda').classList.add('hidden'); }
+
+function emvToggleParcelas(){
+  const pagto=document.getElementById('emv-pagto').value;
+  document.getElementById('emv-inst-wrap').style.display=pagto!=='avista'?'':'none';
+  emvPreview();
+}
+
+function emvPreview(){
+  const s=sales.find(x=>x.id===editMyVendaId); if(!s) return;
+  const total=s.totalVenda||s.productPreco||0;
+  const pagto=document.getElementById('emv-pagto').value;
+  const previewEl=document.getElementById('emv-preview');
+  if(pagto==='avista'){ previewEl.innerHTML=''; return; }
+  const n=parseInt(pagto);
+  const venc=document.getElementById('emv-venc').value||addMonths(today(),1);
+  const valorParc=total/n;
+  let html='<label style="font-size:11px;color:var(--mu);display:block;margin-bottom:6px">Prévia das parcelas</label>';
+  for(let i=0;i<n;i++){
+    const d=addMonths(venc,i);
+    html+=`<div style="display:flex;justify-content:space-between;padding:7px 10px;background:var(--s2);border-radius:6px;margin-bottom:4px;font-size:13px">
+      <span>Parcela ${i+1}/${n} · ${fmtDate(d)}</span>
+      <strong>${fmtBRL(valorParc)}</strong>
+    </div>`;
+  }
+  previewEl.innerHTML=html;
+}
+
+async function saveEditMyVenda(){
+  const s=sales.find(x=>x.id===editMyVendaId); if(!s) return;
+  const nome=document.getElementById('emv-nome').value.trim();
+  if(!nome){ toast('Informe o comprador'); return; }
+
+  const pagto=document.getElementById('emv-pagto').value;
+  const total=s.totalVenda||s.productPreco||0;
+  let installments=[];
+
+  if(pagto!=='avista'){
+    const n=parseInt(pagto);
+    const venc=document.getElementById('emv-venc').value||addMonths(today(),1);
+    const isPagoOld=i=>i.pago===true||i.pago==='true';
+    for(let i=0;i<n;i++){
+      const old=(s.installments||[])[i];
+      installments.push({
+        num:i+1, total:n,
+        valor:total/n,
+        vencimento:addMonths(venc,i),
+        pago: old?isPagoOld(old):false
+      });
+    }
+  }
+
+  spinner(true);
+  try{
+    const r=await fetch(API+'/api/sales/'+editMyVendaId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      comprador:nome,
+      indicacao:document.getElementById('emv-ind').value.trim(),
+      tel:document.getElementById('emv-tel').value.trim(),
+      pagto, installments,
+    })}).then(r=>r.json());
+    sales=sales.map(x=>x.id===editMyVendaId?r:x);
+    closeEditMyVenda();
+    renderMinhasVendas();
+    toast('✔ Venda atualizada!');
+  }catch(e){ toast('Erro ao salvar'); }
+  spinner(false);
 }
 
 function renderParcelas(){

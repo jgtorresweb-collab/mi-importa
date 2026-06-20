@@ -151,6 +151,7 @@ const server = http.createServer(async (req, res) => {
   if (method==='PUT' && url.startsWith('/api/sales/')) {
     const id   = url.split('/').pop();
     const body = JSON.parse((await readBody(req)).toString());
+    delete body.id; // não reenviar a PK no payload de update
     const { data, error } = await supabase.from('sales').update(body).eq('id', id).select().single();
     if (error) return json(res, { error: error.message }, 500);
     return json(res, data);
