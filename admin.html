@@ -186,6 +186,9 @@ textarea{resize:vertical;min-height:70px;}
         <select id="dash-vendedor" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:170px">
           <option value="">Todos os vendedores</option>
         </select>
+        <input type="date" id="dash-de" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:145px" title="De">
+        <span style="color:var(--mu);font-size:13px">até</span>
+        <input type="date" id="dash-ate" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:145px" title="Até">
         <button onclick="aplicarFiltrosDash()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosDash()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
         <span id="dash-filtro-label" style="font-size:12px;color:var(--mu)"></span>
@@ -268,7 +271,10 @@ textarea{resize:vertical;min-height:70px;}
     <!-- VENDAS -->
     <div id="view-vendas" class="view">
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
-        <input type="text" id="venda-search" placeholder="🔍 Buscar comprador ou produto..." oninput="renderVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:220px">
+        <input type="text" id="venda-search" placeholder="🔍 Buscar comprador ou produto..." style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:200px">
+        <input type="date" id="venda-de" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:145px" title="De">
+        <span style="color:var(--mu);font-size:13px">até</span>
+        <input type="date" id="venda-ate" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:145px" title="Até">
         <select id="venda-importador" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:180px">
           <option value="">Todos os importadores</option>
         </select>
@@ -291,11 +297,18 @@ textarea{resize:vertical;min-height:70px;}
         </select>
         <button onclick="renderVendas()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosVenda()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
+        <button onclick="imprimirVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">🖨️ Imprimir</button>
       </div>
+      <!-- Cards totais vendas -->
+      <div id="venda-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px;"></div>
+
       <div class="card">
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Produto</th><th>Comprador</th><th>Indicação</th><th>Telefone</th><th>Pagto</th><th>Valor</th><th>Data</th><th>Status</th><th></th></tr></thead>
+            <thead><tr>
+              <th>Produto</th><th>Comprador</th><th>Vendedor</th><th>Indicação</th><th>Telefone</th>
+              <th>Pagto</th><th>Valor</th><th>Comissão</th><th>Data</th><th>Status</th><th></th>
+            </tr></thead>
             <tbody id="venda-tbody"></tbody>
           </table>
         </div>
@@ -315,6 +328,9 @@ textarea{resize:vertical;min-height:70px;}
         <select id="parc-vendedor" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
           <option value="">Todos os vendedores</option>
         </select>
+        <input type="date" id="parc-de" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:145px" title="De">
+        <span style="color:var(--mu);font-size:13px">até</span>
+        <input type="date" id="parc-ate" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:145px" title="Até">
         <button onclick="renderParcelas()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosParc()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
       </div>
@@ -342,15 +358,12 @@ textarea{resize:vertical;min-height:70px;}
           <option value="avista">À vista</option>
           <option value="parcelado">Parcelado</option>
         </select>
-        <select id="rel-periodo" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
-          <option value="30">Últimos 30 dias</option>
-          <option value="60">Últimos 60 dias</option>
-          <option value="90">Últimos 90 dias</option>
-          <option value="999">Todo o período</option>
-        </select>
         <select id="rel-vendedor" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:160px">
           <option value="">Todos os vendedores</option>
         </select>
+        <input type="date" id="rel-de" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:145px" title="De">
+        <span style="color:var(--mu);font-size:13px">até</span>
+        <input type="date" id="rel-ate" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:145px" title="Até">
         <button onclick="pesquisarRelatorio()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosRel()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
       </div>
@@ -632,6 +645,8 @@ function limparFiltrosDash(){
   document.getElementById('dash-categoria').value='';
   document.getElementById('dash-produto').value='';
   document.getElementById('dash-vendedor').value='';
+  const dd=document.getElementById('dash-de'); if(dd) dd.value='';
+  const da=document.getElementById('dash-ate'); if(da) da.value='';
   renderDashboard();
 }
 
@@ -642,6 +657,8 @@ function renderDashboard(){
   const filtCat=document.getElementById('dash-categoria')?.value||'';
   const filtProd=document.getElementById('dash-produto')?.value||'';
   const filtVendDash=document.getElementById('dash-vendedor')?.value||'';
+  const filtDashDe=document.getElementById('dash-de')?.value||'';
+  const filtDashAte=document.getElementById('dash-ate')?.value||'';
 
   // Label
   const filtros=[];
@@ -659,7 +676,7 @@ function renderDashboard(){
     return true;
   });
   const idsFilt=new Set(prodsFiltrados.map(p=>p.id));
-  const salesFiltradas=sales.filter(s=>idsFilt.has(s.productId)&&(!filtVendDash||s.vendedorId===filtVendDash));
+  const salesFiltradas=sales.filter(s=>idsFilt.has(s.productId)&&(!filtVendDash||s.vendedorId===filtVendDash)&&(!filtDashDe||(s.date||'')>=filtDashDe)&&(!filtDashAte||(s.date||'')<=filtDashAte));
 
   const fat=salesFiltradas.reduce((s,v)=>s+(v.productPreco||0),0);
   const lucro=salesFiltradas.reduce((acc,s)=>{
@@ -1033,6 +1050,8 @@ function limparFiltrosVenda(){
   document.getElementById('venda-cat').value='';
   document.getElementById('venda-pagto').value='';
   document.getElementById('venda-status').value='';
+  document.getElementById('venda-de').value='';
+  document.getElementById('venda-ate').value='';
   const vv=document.getElementById('venda-vendedor'); if(vv) vv.value='';
   renderVendas();
 }
@@ -1054,6 +1073,8 @@ function renderVendas(){
   const pagto=document.getElementById('venda-pagto').value;
   const filtStatus=document.getElementById('venda-status').value;
   const filtVendV=document.getElementById('venda-vendedor')?.value||'';
+  const filtDe=document.getElementById('venda-de')?.value||'';
+  const filtAte=document.getElementById('venda-ate')?.value||'';
 
   let list=sales.filter(s=>{
     const mQ=!q||s.comprador.toLowerCase().includes(q)||s.productName.toLowerCase().includes(q);
@@ -1062,16 +1083,35 @@ function renderVendas(){
     const mI=!filtImpV||p?.importador===filtImpV;
     const mC=!filtCatV||p?.categoria===filtCatV;
     const mV=!filtVendV||s.vendedorId===filtVendV;
+    const mDe=!filtDe||(s.date||'')>=filtDe;
+    const mAte=!filtAte||(s.date||'')<=filtAte;
     const overdue=s.installments?.some(i=>!i.pago&&isOverdue(i.vencimento));
     const allPaid=!s.installments?.length||s.installments?.every(i=>i.pago);
     const mS=!filtStatus||
       (filtStatus==='pago'&&(s.pagto==='avista'||allPaid))||
       (filtStatus==='vencido'&&overdue)||
       (filtStatus==='aberto'&&!allPaid&&!overdue&&s.pagto!=='avista');
-    return mQ&&mP&&mI&&mC&&mV&&mS;
+    return mQ&&mP&&mI&&mC&&mV&&mS&&mDe&&mAte;
   }).sort((a,b)=>b.date?.localeCompare(a.date));
+
+  // Cards de totais
+  const totalVendas=list.reduce((a,s)=>a+(s.totalVenda||s.productPreco||0),0);
+  const totalAvista=list.filter(s=>s.pagto==='avista').reduce((a,s)=>a+(s.totalVenda||s.productPreco||0),0);
+  const isPagoI=i=>i.pago===true||i.pago==='true';
+  const totalFaturado=list.filter(s=>s.pagto!=='avista').reduce((acc,s)=>{
+    return acc+(s.installments||[]).filter(i=>!isPagoI(i)).reduce((a,i)=>a+(i.valor||0),0);
+  },0);
+  const totalComissoes=list.reduce((a,s)=>a+(s.comissaoVendedor||0),0);
+  const cardsEl=document.getElementById('venda-cards');
+  if(cardsEl) cardsEl.innerHTML=`
+    <div class="stat"><div class="stat-label">Total de vendas</div><div class="stat-val" style="font-size:19px">${fmtBRL(totalVendas)}</div><div class="stat-sub">${list.length} venda(s)</div></div>
+    <div class="stat"><div class="stat-label">Vendas à vista</div><div class="stat-val" style="font-size:19px;color:var(--ok)">${fmtBRL(totalAvista)}</div><div class="stat-sub">${list.filter(s=>s.pagto==='avista').length} venda(s)</div></div>
+    <div class="stat warn"><div class="stat-label">A receber (faturado)</div><div class="stat-val" style="font-size:19px">${fmtBRL(totalFaturado)}</div><div class="stat-sub">${list.filter(s=>s.pagto!=='avista').length} parcelada(s)</div></div>
+    ${totalComissoes>0?'<div class="stat info"><div class="stat-label">Total comissões</div><div class="stat-val" style="font-size:19px">'+fmtBRL(totalComissoes)+'</div></div>':''}
+  `;
+
   const tbody=document.getElementById('venda-tbody');
-  if(!list.length){ tbody.innerHTML='<tr><td colspan="9"><div class="empty"><div class="empty-icon">🧾</div><p>Nenhuma venda encontrada.</p></div></td></tr>'; return; }
+  if(!list.length){ tbody.innerHTML='<tr><td colspan="11"><div class="empty"><div class="empty-icon">🧾</div><p>Nenhuma venda encontrada.</p></div></td></tr>'; return; }
   tbody.innerHTML=list.map(s=>`<tr>
     <td><strong>${s.productName}</strong></td>
     <td>${s.comprador}</td>
@@ -1174,7 +1214,19 @@ function renderParcelas(){
     if(filtImpP && prod?.importador!==filtImpP) return;
     if(filtCatP && prod?.categoria!==filtCatP) return;
     if(qP && !s.comprador.toLowerCase().includes(qP) && !s.productName.toLowerCase().includes(qP)) return;
-    (s.installments||[]).forEach(i=>all.push({...i,sale:s}));
+
+    if(s.pagto==='avista'){
+      // Venda à vista não gera installments — criamos uma "parcela virtual" já paga
+      all.push({
+        num:1, total:1,
+        valor:s.totalVenda||s.productPreco||0,
+        vencimento:s.date,
+        pago:true,
+        sale:s
+      });
+    } else {
+      (s.installments||[]).forEach(i=>all.push({...i,sale:s}));
+    }
   });
 
   const isPago=i=>i.pago===true||i.pago==='true';
@@ -1255,24 +1307,27 @@ function renderAVencer(list){
 function renderInstList(list,elId,color,paid=false){
   const el=document.getElementById(elId);
   if(!list.length){ el.innerHTML=`<p style="color:var(--mu);font-size:13px;padding:12px 0">Nenhuma parcela aqui.</p>`; return; }
-  el.innerHTML=list.map(i=>`<div class="inst-badge">
+  el.innerHTML=list.map(i=>{
+    const isAvista = i.sale.pagto==='avista';
+    const parcLabel = isAvista ? 'À vista' : `Parcela ${i.num}/${i.total}`;
+    return `<div class="inst-badge">
     <div>
       <strong>${i.sale.comprador}</strong> · <span style="color:var(--mu)">${i.sale.productName}</span><br>
-      <span style="font-size:12px;color:var(--mu)">Parcela ${i.num}/${i.total} · Vence ${fmtDate(i.vencimento)}</span>
+      <span style="font-size:12px;color:var(--mu)">${parcLabel} · ${isAvista?'Vendido em':'Vence'} ${fmtDate(i.vencimento)}</span>
     </div>
     <div style="display:flex;align-items:center;gap:10px">
       <strong style="color:${color}">${fmtBRL(i.valor)}</strong>
       ${!paid?`<button class="btn btn-sm" onclick="markPaid('${i.sale.id}',${i.num})">✔ Pago</button>`:'<span class="chip chip-ok">Paga</span>'}
     </div>
-  </div>`).join('');
+  </div>`;
+  }).join('');
 }
 
 // ── RELATÓRIOS ────────────────────────────────────────────────────────────────
 function limparFiltrosRel(){
-  document.getElementById('rel-importador').value='';
-  document.getElementById('rel-categoria').value='';
-  document.getElementById('rel-pagto').value='';
-  document.getElementById('rel-periodo').value='999';
+  ['rel-importador','rel-categoria','rel-pagto','rel-vendedor','rel-de','rel-ate'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
   renderRelatorios();
 }
 function pesquisarRelatorio(){ renderRelatorios(); }
@@ -1290,17 +1345,19 @@ function renderRelatorios(){
   const impId=document.getElementById('rel-importador').value;
   const catId=document.getElementById('rel-categoria').value;
   const pagtoId=document.getElementById('rel-pagto').value;
-  const dias=parseInt(document.getElementById('rel-periodo').value)||999;
-  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-dias);
+  const relVend=document.getElementById('rel-vendedor')?.value||'';
+  const relDe=document.getElementById('rel-de')?.value||'';
+  const relAte=document.getElementById('rel-ate')?.value||'';
 
   let vendas=sales.filter(s=>{
-    const d=new Date((s.date||'2000-01-01')+'T12:00:00');
-    if(d<cutoff) return false;
     const p=products.find(x=>x.id===s.productId);
     if(impId && p?.importador!==impId) return false;
     if(catId && p?.categoria!==catId) return false;
     if(pagtoId==='avista' && s.pagto!=='avista') return false;
     if(pagtoId==='parcelado' && s.pagto==='avista') return false;
+    if(relVend && s.vendedorId!==relVend) return false;
+    if(relDe && (s.date||'')<relDe) return false;
+    if(relAte && (s.date||'')>relAte) return false;
     return true;
   }).sort((a,b)=>b.date?.localeCompare(a.date));
 
@@ -1353,6 +1410,97 @@ function renderEncalhados(){
       <td><span class="chip ${dias>60?'chip-danger':'chip-warn'}">${dias} dias</span></td>
     </tr>`;
   }).join('');
+}
+
+// ── IMPRIMIR VENDAS ───────────────────────────────────────────────────────────
+function imprimirVendas(){
+  // Pegar a lista atual filtrada relendo os filtros
+  const q=document.getElementById('venda-search').value.toLowerCase();
+  const filtImpV=document.getElementById('venda-importador').value;
+  const filtCatV=document.getElementById('venda-cat').value;
+  const pagto=document.getElementById('venda-pagto').value;
+  const filtStatus=document.getElementById('venda-status').value;
+  const filtVendV=document.getElementById('venda-vendedor')?.value||'';
+  const filtDe=document.getElementById('venda-de')?.value||'';
+  const filtAte=document.getElementById('venda-ate')?.value||'';
+  const isPagoI=i=>i.pago===true||i.pago==='true';
+
+  const list=sales.filter(s=>{
+    const mQ=!q||s.comprador.toLowerCase().includes(q)||s.productName.toLowerCase().includes(q);
+    const mP=!pagto||(pagto==='avista'&&s.pagto==='avista')||(pagto==='parcelado'&&s.pagto!=='avista');
+    const p=products.find(x=>x.id===s.productId);
+    const mI=!filtImpV||p?.importador===filtImpV;
+    const mC=!filtCatV||p?.categoria===filtCatV;
+    const mV=!filtVendV||s.vendedorId===filtVendV;
+    const mDe=!filtDe||(s.date||'')>=filtDe;
+    const mAte=!filtAte||(s.date||'')<=filtAte;
+    const overdue=s.installments?.some(i=>!isPagoI(i)&&isOverdue(i.vencimento));
+    const allPaid=!s.installments?.length||s.installments?.every(i=>isPagoI(i));
+    const mS=!filtStatus||
+      (filtStatus==='pago'&&(s.pagto==='avista'||allPaid))||
+      (filtStatus==='vencido'&&overdue)||
+      (filtStatus==='aberto'&&!allPaid&&!overdue&&s.pagto!=='avista');
+    return mQ&&mP&&mI&&mC&&mV&&mS&&mDe&&mAte;
+  }).sort((a,b)=>b.date?.localeCompare(a.date));
+
+  const totalVendas=list.reduce((a,s)=>a+(s.totalVenda||s.productPreco||0),0);
+  const totalAvista=list.filter(s=>s.pagto==='avista').reduce((a,s)=>a+(s.totalVenda||s.productPreco||0),0);
+  const totalFat=list.filter(s=>s.pagto!=='avista').reduce((acc,s)=>acc+(s.installments||[]).filter(i=>!isPagoI(i)).reduce((a,i)=>a+(i.valor||0),0),0);
+  const totalCom=list.reduce((a,s)=>a+(s.comissaoVendedor||0),0);
+
+  const periodo=filtDe||filtAte?`${filtDe?'De '+fmtDate(filtDe):''}${filtAte?' até '+fmtDate(filtAte):''}`.trim():'Todo o período';
+
+  const rows=list.map(s=>{
+    const isPagoS=i=>i.pago===true||i.pago==='true';
+    const allP=!s.installments?.length||s.installments?.every(i=>isPagoS(i));
+    const ov=s.installments?.some(i=>!isPagoS(i)&&isOverdue(i.vencimento));
+    const st=s.pagto==='avista'?'Pago':allP?'Quitado':ov?'Vencida':'Em aberto';
+    return `<tr>
+      <td>${s.productName}</td>
+      <td>${s.comprador}</td>
+      <td>${s.vendedorNome||'—'}</td>
+      <td>${s.pagto==='avista'?'À vista':s.pagto}</td>
+      <td style="text-align:right"><strong>R$ ${Number(s.totalVenda||s.productPreco||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></td>
+      <td style="text-align:right">${s.comissaoVendedor>0?'R$ '+Number(s.comissaoVendedor).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td>
+      <td>${fmtDate(s.date)}</td>
+      <td>${st}</td>
+    </tr>`;
+  }).join('');
+
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Vendas MI Importa</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:12px;padding:20px;color:#111;}
+    h1{font-size:18px;margin-bottom:4px;}
+    .sub{font-size:11px;color:#666;margin-bottom:6px;}
+    .cards{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;}
+    .card{border:1px solid #ddd;border-radius:6px;padding:10px 14px;min-width:140px;}
+    .card-label{font-size:10px;color:#888;text-transform:uppercase;margin-bottom:4px;}
+    .card-val{font-size:16px;font-weight:700;}
+    table{width:100%;border-collapse:collapse;}
+    th{background:#1a1a1a;color:#ffd700;padding:7px 8px;text-align:left;font-size:11px;}
+    td{padding:6px 8px;border-bottom:1px solid #eee;vertical-align:middle;}
+    tr:nth-child(even) td{background:#f9f9f9;}
+    tfoot td{background:#f0f0f0;font-weight:700;border-top:2px solid #333;}
+    @media print{button{display:none!important;}}
+  </style></head><body>
+  <h1>🏷 MI Importa — Relatório de Vendas</h1>
+  <div class="sub">Período: ${periodo} · Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</div>
+  <button onclick="window.print()" style="margin-bottom:14px;padding:7px 16px;background:#b8860b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
+  <div class="cards">
+    <div class="card"><div class="card-label">Total vendas</div><div class="card-val">R$ ${Number(totalVendas).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
+    <div class="card"><div class="card-label">À vista</div><div class="card-val" style="color:green">R$ ${Number(totalAvista).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
+    <div class="card"><div class="card-label">A receber</div><div class="card-val" style="color:orange">R$ ${Number(totalFat).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>
+    ${totalCom>0?'<div class="card"><div class="card-label">Comissões</div><div class="card-val" style="color:#b8860b">R$ '+Number(totalCom).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</div></div>':''}
+    <div class="card"><div class="card-label">Qtd vendas</div><div class="card-val">${list.length}</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Produto</th><th>Comprador</th><th>Vendedor</th><th>Pagto</th><th style="text-align:right">Valor</th><th style="text-align:right">Comissão</th><th>Data</th><th>Status</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="4"><strong>TOTAL</strong></td><td style="text-align:right">R$ ${Number(totalVendas).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="text-align:right">${totalCom>0?'R$ '+Number(totalCom).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td colspan="2"></td></tr></tfoot>
+  </table>
+  </body></html>`);
+  win.document.close();
 }
 
 // ── IMPRIMIR PRODUTOS ─────────────────────────────────────────────────────────
