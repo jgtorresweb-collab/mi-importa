@@ -38,6 +38,10 @@ main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100v
 /* CARDS STAT */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:28px;}
 .stat{background:var(--s1);border:1px solid var(--b);border-radius:var(--r);padding:18px;position:relative;overflow:hidden;}
+.stat[draggable="true"]{cursor:grab;transition:transform .12s,box-shadow .12s;}
+.stat[draggable="true"]:active{cursor:grabbing;}
+.stat.dragging{opacity:.4;}
+.stat.drag-over{outline:2px dashed #ffd700;outline-offset:-2px;box-shadow:0 0 0 4px rgba(255,215,0,.08);}
 .stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#b8860b,#ffd700,#b8860b);}
 .stat.warn::before{background:var(--warn);}
 .stat.danger::before{background:var(--danger);}
@@ -798,34 +802,46 @@ function limparFiltrosDash(){
 let dashDragKey=null;
 function dashDragStart(ev){
   dashDragKey=ev.currentTarget.dataset.key;
-  ev.currentTarget.style.opacity='.4';
+  ev.currentTarget.classList.add('dragging');
   ev.dataTransfer.effectAllowed='move';
+  try{ ev.dataTransfer.setData('text/plain', dashDragKey); }catch(e){}
 }
 function dashDragOver(ev){
   ev.preventDefault();
-  ev.currentTarget.style.outline='2px dashed #ffd700';
+  ev.dataTransfer.dropEffect='move';
+  const card=ev.currentTarget.closest('.stat');
+  if(card) card.classList.add('drag-over');
+}
+function dashDragLeave(ev){
+  const card=ev.currentTarget.closest('.stat');
+  if(card) card.classList.remove('drag-over');
 }
 function dashDrop(ev){
   ev.preventDefault();
-  const targetEl=ev.currentTarget;
-  targetEl.style.outline='';
+  ev.stopPropagation();
+  const targetEl=ev.currentTarget.closest('.stat');
+  if(!targetEl) return;
+  targetEl.classList.remove('drag-over');
   const targetKey=targetEl.dataset.key;
-  if(!dashDragKey||dashDragKey===targetKey) return;
+  const draggedKey=dashDragKey || ev.dataTransfer.getData('text/plain');
+  if(!draggedKey||draggedKey===targetKey) return;
 
   const grid=document.getElementById('stat-grid');
   const cards=[...grid.children];
   const keys=cards.map(c=>c.dataset.key);
-  const fromIdx=keys.indexOf(dashDragKey);
+  const fromIdx=keys.indexOf(draggedKey);
   const toIdx=keys.indexOf(targetKey);
   if(fromIdx===-1||toIdx===-1) return;
 
   keys.splice(toIdx,0,keys.splice(fromIdx,1)[0]);
   localStorage.setItem('mi_dash_card_order',JSON.stringify(keys));
+  dashDragKey=null;
   renderDashboard();
 }
 function dashDragEnd(ev){
-  ev.currentTarget.style.opacity='';
-  document.querySelectorAll('#stat-grid .stat').forEach(el=>el.style.outline='');
+  ev.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('#stat-grid .stat').forEach(el=>el.classList.remove('drag-over'));
+  dashDragKey=null;
 }
 
 function renderDashboard(){
@@ -905,7 +921,7 @@ function renderDashboard(){
   }
 
   document.getElementById('stat-grid').innerHTML=orderedCards.map(c=>
-    `<div class="stat ${c.cls}" draggable="true" data-key="${c.key}" ondragstart="dashDragStart(event)" ondragover="dashDragOver(event)" ondrop="dashDrop(event)" ondragend="dashDragEnd(event)" style="cursor:grab">${c.html}</div>`
+    `<div class="stat ${c.cls}" draggable="true" data-key="${c.key}" ondragstart="dashDragStart(event)" ondragover="dashDragOver(event)" ondragleave="dashDragLeave(event)" ondrop="dashDrop(event)" ondragend="dashDragEnd(event)">${c.html}</div>`
   ).join('');
 
   // Gráfico vendas por mês
@@ -925,12 +941,17 @@ function renderDashboard(){
   const byCat={};
   salesFiltradas.forEach(s=>{ const p=products.find(x=>x.id===s.productId); const cat=p?.categoria||'Outros'; byCat[cat]=(byCat[cat]||0)+(s.productPreco||0); });
   const catLabels=Object.keys(byCat), catVals=catLabels.map(cat=>byCat[cat]);
+  const totalCat=catVals.reduce((a,v)=>a+v,0);
+  const catLabelsDisplay=catLabels.map((cat,i)=>{
+    const pct=totalCat?((catVals[i]/totalCat)*100).toFixed(1):'0.0';
+    return `${pct}% ${cat} ${fmtBRL(catVals[i])}`;
+  });
   const colors=['rgba(200,240,58,.8)','rgba(96,170,255,.8)','rgba(245,166,35,.8)','rgba(77,222,128,.8)','rgba(255,90,90,.8)','rgba(180,120,255,.8)'];
   if(chartCats) chartCats.destroy();
   const semCats=catLabels.length===0;
   chartCats=new Chart(document.getElementById('chart-categorias'),{
     type:'doughnut',
-    data:{labels:semCats?['Sem vendas ainda']:catLabels,datasets:[{data:semCats?[1]:catVals,backgroundColor:semCats?['#2a2a2a']:colors}]},
+    data:{labels:semCats?['Sem vendas ainda']:catLabelsDisplay,datasets:[{data:semCats?[1]:catVals,backgroundColor:semCats?['#2a2a2a']:colors}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:semCats?'#444':'#aaa',font:{size:11}}},tooltip:{enabled:!semCats}}}
   });
 
@@ -1872,6 +1893,26 @@ function buildPrintHTML(viewName){
   const clone=viewEl.cloneNode(true);
   clone.querySelectorAll('input,select,button').forEach(el=>el.closest('td')?el.closest('td').remove():el.remove());
   clone.querySelectorAll('.icon-btn,.btn,.btn-sm').forEach(el=>el.remove());
+
+  // Converter cada <canvas> (gráficos Chart.js) em <img> com a imagem real,
+  // pois clonar um canvas não copia o que foi desenhado nele.
+  const canvasesOriginais=viewEl.querySelectorAll('canvas');
+  const canvasesClone=clone.querySelectorAll('canvas');
+  canvasesOriginais.forEach((origCanvas,i)=>{
+    const cloneCanvas=canvasesClone[i];
+    if(!cloneCanvas) return;
+    try{
+      const dataUrl=origCanvas.toDataURL('image/png');
+      const img=document.createElement('img');
+      img.src=dataUrl;
+      img.style.maxWidth='100%';
+      img.style.background='#fff';
+      img.style.padding='8px';
+      img.style.borderRadius='6px';
+      cloneCanvas.replaceWith(img);
+    }catch(e){ /* canvas vazio ou erro de captura — mantém oculto */ }
+  });
+
   // Remove colunas de ação vazias resultantes (th vazio no fim)
   const titulo=pageTitlesPrint[viewName]||viewName;
   return `<!DOCTYPE html><html><head><title>${titulo} — MI Importa</title>
@@ -1883,7 +1924,8 @@ function buildPrintHTML(viewName){
     th{background:#1a1a1a;color:#ffd700;padding:7px 8px;text-align:left;font-size:11px;}
     td{padding:6px 8px;border-bottom:1px solid #eee;vertical-align:middle;color:#111;}
     tr:nth-child(even) td{background:#f9f9f9;}
-    img{max-width:36px;border-radius:4px;}
+    img:not([src^="data:"]){max-width:36px;border-radius:4px;}
+    img[src^="data:"]{max-width:380px;display:block;margin:0 auto;}
     .stat,.card{border:1px solid #ddd;border-radius:6px;padding:10px 14px;margin-bottom:10px;background:#fff;color:#111;}
     .stat-label{font-size:10px;color:#888;text-transform:uppercase;}
     .stat-val{font-size:16px;font-weight:700;color:#111;}
@@ -1891,7 +1933,6 @@ function buildPrintHTML(viewName){
     [id$="-cards"], .stat-grid{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
     .chip{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:#eee;color:#333;}
     .tabs{display:none;}
-    canvas{display:none;}
     @media print{button{display:none!important;}}
   </style></head><body>
   <h1>🏷 MI Importa — ${titulo}</h1>
