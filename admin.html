@@ -192,6 +192,8 @@ textarea{resize:vertical;min-height:70px;}
         <input type="date" id="dash-ate" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:145px" title="Até">
         <button onclick="aplicarFiltrosDash()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosDash()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
+        <button onclick="imprimirPagina('dashboard')" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">🖨️ Imprimir</button>
+        <button onclick="compartilharPagina('dashboard')" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">📤 Enviar</button>
         <span id="dash-filtro-label" style="font-size:12px;color:var(--mu)"></span>
       </div>
       <div class="stat-grid" id="stat-grid"></div>
@@ -230,6 +232,7 @@ textarea{resize:vertical;min-height:70px;}
         <button onclick="limparFiltrosProd()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
         <div style="margin-left:auto;display:flex;gap:8px">
           <button class="btn btn-sec btn-sm" onclick="imprimirProdutos()">🖨️ Imprimir</button>
+          <button class="btn btn-sec btn-sm" onclick="compartilharPagina('produtos')">📤 Enviar</button>
           <button class="btn" onclick="openProdutoModal()">+ Novo produto</button>
         </div>
       </div>
@@ -256,7 +259,9 @@ textarea{resize:vertical;min-height:70px;}
 
     <!-- IMPORTADORES -->
     <div id="view-importadores" class="view">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
+        <button class="btn btn-sec btn-sm" onclick="imprimirPagina('importadores')">🖨️ Imprimir</button>
+        <button class="btn btn-sec btn-sm" onclick="compartilharPagina('importadores')">📤 Enviar</button>
         <button class="btn" onclick="openImporterModal()">+ Novo importador</button>
       </div>
       <div class="card">
@@ -299,6 +304,7 @@ textarea{resize:vertical;min-height:70px;}
         <button onclick="renderVendas()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosVenda()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
         <button onclick="imprimirVendas()" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">🖨️ Imprimir</button>
+        <button onclick="compartilharPagina('vendas')" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">📤 Enviar</button>
       </div>
       <!-- Cards totais vendas -->
       <div id="venda-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px;"></div>
@@ -334,6 +340,8 @@ textarea{resize:vertical;min-height:70px;}
         <input type="date" id="parc-ate" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:145px" title="Até">
         <button onclick="renderParcelas()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosParc()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
+        <button onclick="imprimirPagina('parcelas')" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">🖨️ Imprimir</button>
+        <button onclick="compartilharPagina('parcelas')" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">📤 Enviar</button>
       </div>
       <div class="tabs">
         <div class="tab active" onclick="switchTab('pagas',this)">✔ Pagas</div>
@@ -367,6 +375,8 @@ textarea{resize:vertical;min-height:70px;}
         <input type="date" id="rel-ate" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-family:var(--font);font-size:13px;width:145px" title="Até">
         <button onclick="pesquisarRelatorio()" style="background:linear-gradient(135deg,#b8860b,#ffd700);color:#000;border:none;border-radius:8px;padding:7px 16px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">🔍 Pesquisar</button>
         <button onclick="limparFiltrosRel()" style="background:var(--s2);border:1px solid var(--b);color:var(--mu);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">✕ Limpar</button>
+        <button onclick="imprimirPagina('relatorios')" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">🖨️ Imprimir</button>
+        <button onclick="compartilharPagina('relatorios')" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">📤 Enviar</button>
       </div>
       <div class="stat-grid" id="rel-stats"></div>
       <div class="card">
@@ -382,7 +392,9 @@ textarea{resize:vertical;min-height:70px;}
 
     <!-- VENDEDORES -->
     <div id="view-vendedores" class="view">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
+        <button class="btn btn-sec btn-sm" onclick="imprimirPagina('vendedores')">🖨️ Imprimir</button>
+        <button class="btn btn-sec btn-sm" onclick="compartilharPagina('vendedores')">📤 Enviar</button>
         <button class="btn" onclick="openVendedorModal()">+ Novo vendedor</button>
       </div>
       <div class="card">
@@ -408,7 +420,11 @@ textarea{resize:vertical;min-height:70px;}
             <option value="cancelado">Cancelado</option>
           </select>
         </div>
-        <button class="btn" onclick="openPedidoModal()">+ Novo pedido</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sec btn-sm" onclick="imprimirPagina('pedidos')">🖨️ Imprimir</button>
+          <button class="btn btn-sec btn-sm" onclick="compartilharPagina('pedidos')">📤 Enviar</button>
+          <button class="btn" onclick="openPedidoModal()">+ Novo pedido</button>
+        </div>
       </div>
       <div class="card">
         <div class="tbl-wrap">
@@ -425,6 +441,11 @@ textarea{resize:vertical;min-height:70px;}
 
     <!-- ENCALHADOS -->
     <div id="view-encalhados" class="view">
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
+        <button class="btn btn-sec btn-sm" onclick="imprimirPagina('encalhados')">🖨️ Imprimir</button>
+        <button class="btn btn-sec btn-sm" onclick="compartilharPagina('encalhados')">📤 Enviar</button>
+      </div>
+      <div id="enc-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px;"></div>
       <div class="card">
         <div class="card-header"><h3>Produtos sem venda há 30+ dias</h3></div>
         <div class="tbl-wrap">
@@ -807,7 +828,7 @@ function renderDashboard(){
   },0);
   const pv=salesFiltradas.flatMap(s=>(s.installments||[]).filter(i=>!i.pago&&isOverdue(i.vencimento))).length;
   const d30=new Date(); d30.setDate(d30.getDate()-30);
-  const enc=prodsFiltrados.filter(p=>!isSoldOut(p)&&new Date((p.createdAt||'2000-01-01')+'T12:00:00')<=d30);
+  const enc=prodsFiltrados.filter(p=>!isSoldOut(p)&&new Date((p.created_at||'2000-01-01')+'T12:00:00')<=d30);
   const ticket=salesFiltradas.length?fat/salesFiltradas.length:0;
   const comissoes=salesFiltradas.reduce((acc,s)=>{
     const p=products.find(x=>x.id===s.productId);
@@ -1664,11 +1685,26 @@ function renderRelatorios(){
 // ── ENCALHADOS ────────────────────────────────────────────────────────────────
 function renderEncalhados(){
   const d30=new Date(); d30.setDate(d30.getDate()-30);
-  const enc=products.filter(p=>!isSoldOut(p)&&new Date((p.createdAt||'2000-01-01')+'T12:00:00')<=d30);
+  const enc=products.filter(p=>!isSoldOut(p)&&new Date((p.created_at||'2000-01-01')+'T12:00:00')<=d30);
+
+  // Card de somatório
+  const totalCusto=enc.reduce((acc,p)=>{
+    const disp=estoqueDisp(p);
+    const custoReal=p.moeda!=='BRL'?(p.custo*(p.cambio||1)):p.custo;
+    return acc+(custoReal*disp);
+  },0);
+  const totalVenda=enc.reduce((acc,p)=>acc+(p.preco*estoqueDisp(p)),0);
+  const cardsEl=document.getElementById('enc-cards');
+  if(cardsEl) cardsEl.innerHTML=`
+    <div class="stat"><div class="stat-label">Itens em estoque parado</div><div class="stat-val" style="font-size:19px">${enc.length}</div></div>
+    <div class="stat info"><div class="stat-label">Valor total · custo</div><div class="stat-val" style="font-size:19px">${fmtBRL(totalCusto)}</div></div>
+    <div class="stat warn"><div class="stat-label">Valor total · venda</div><div class="stat-val" style="font-size:19px">${fmtBRL(totalVenda)}</div></div>
+  `;
+
   const tbody=document.getElementById('enc-tbody');
   if(!enc.length){ tbody.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-icon">🎉</div><p>Nenhum produto encalhado!</p></div></td></tr>'; return; }
   tbody.innerHTML=enc.map(p=>{
-    const dias=Math.floor((Date.now()-new Date((p.createdAt||'2000-01-01')+'T12:00:00'))/86400000);
+    const dias=Math.floor((Date.now()-new Date((p.created_at||'2000-01-01')+'T12:00:00'))/86400000);
     const thumb=p.fotos?.[0]?`<img src="${p.fotos[0]}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;filter:grayscale(.5)">`:'—';
     return `<tr>
       <td>${thumb}</td>
@@ -1774,6 +1810,68 @@ function imprimirVendas(){
 }
 
 // ── IMPRIMIR PRODUTOS ─────────────────────────────────────────────────────────
+// ── IMPRIMIR / ENVIAR (genérico, captura a view ativa na tela) ────────────────
+const pageTitlesPrint={
+  dashboard:'Dashboard', produtos:'Produtos', importadores:'Importadores',
+  vendedores:'Vendedores', vendas:'Vendas', parcelas:'Parcelas', pedidos:'Pedidos',
+  relatorios:'Relatórios', encalhados:'Em Estoque'
+};
+
+function buildPrintHTML(viewName){
+  const viewEl=document.getElementById('view-'+viewName);
+  if(!viewEl) return null;
+  // Clona a view, remove inputs/botões de filtro e ação para não poluir o PDF
+  const clone=viewEl.cloneNode(true);
+  clone.querySelectorAll('input,select,button').forEach(el=>el.closest('td')?el.closest('td').remove():el.remove());
+  clone.querySelectorAll('.icon-btn,.btn,.btn-sm').forEach(el=>el.remove());
+  // Remove colunas de ação vazias resultantes (th vazio no fim)
+  const titulo=pageTitlesPrint[viewName]||viewName;
+  return `<!DOCTYPE html><html><head><title>${titulo} — MI Importa</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:12px;padding:20px;color:#111;background:#fff;}
+    h1{font-size:18px;margin-bottom:4px;}
+    .sub{font-size:11px;color:#666;margin-bottom:16px;}
+    table{width:100%;border-collapse:collapse;margin-top:10px;}
+    th{background:#1a1a1a;color:#ffd700;padding:7px 8px;text-align:left;font-size:11px;}
+    td{padding:6px 8px;border-bottom:1px solid #eee;vertical-align:middle;color:#111;}
+    tr:nth-child(even) td{background:#f9f9f9;}
+    img{max-width:36px;border-radius:4px;}
+    .stat,.card{border:1px solid #ddd;border-radius:6px;padding:10px 14px;margin-bottom:10px;background:#fff;color:#111;}
+    .stat-label{font-size:10px;color:#888;text-transform:uppercase;}
+    .stat-val{font-size:16px;font-weight:700;color:#111;}
+    .stat-sub{font-size:10px;color:#888;}
+    [id$="-cards"], .stat-grid{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+    .chip{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:#eee;color:#333;}
+    .tabs{display:none;}
+    canvas{display:none;}
+    @media print{button{display:none!important;}}
+  </style></head><body>
+  <h1>🏷 MI Importa — ${titulo}</h1>
+  <div class="sub">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</div>
+  <button onclick="window.print()" style="margin-bottom:14px;padding:7px 16px;background:#b8860b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Imprimir / Salvar PDF</button>
+  ${clone.innerHTML}
+  </body></html>`;
+}
+
+function imprimirPagina(viewName){
+  const html=buildPrintHTML(viewName);
+  if(!html){ toast('Não foi possível gerar a impressão',true); return; }
+  const win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function compartilharPagina(viewName){
+  // Abre a mesma janela de impressão — o usuário usa "Salvar como PDF" na impressão
+  // e depois compartilha o arquivo gerado via WhatsApp/e-mail normalmente.
+  const html=buildPrintHTML(viewName);
+  if(!html){ toast('Não foi possível gerar o relatório',true); return; }
+  const win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  toast('Use "Salvar como PDF" na impressão para enviar por e-mail ou WhatsApp');
+}
+
 function imprimirProdutos(){
   const rows=products.map(p=>{
     const sold=isSoldOut(p);
