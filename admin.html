@@ -196,6 +196,7 @@ textarea{resize:vertical;min-height:70px;}
         <button onclick="compartilharPagina('dashboard')" style="background:var(--s2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:13px;cursor:pointer">📤 Enviar</button>
         <span id="dash-filtro-label" style="font-size:12px;color:var(--mu)"></span>
       </div>
+      <div style="font-size:11px;color:var(--mu);margin-bottom:8px">💡 Arraste os cards abaixo para reorganizá-los do seu jeito</div>
       <div class="stat-grid" id="stat-grid"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
         <div class="card">
@@ -447,7 +448,7 @@ textarea{resize:vertical;min-height:70px;}
       </div>
       <div id="enc-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px;"></div>
       <div class="card">
-        <div class="card-header"><h3>Produtos sem venda há 30+ dias</h3></div>
+        <div class="card-header"><h3>Todos os produtos disponíveis em estoque</h3></div>
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>Foto</th><th>Produto</th><th>Categoria</th><th>Importador</th><th>Preço</th><th>Estoque</th><th>Dias parado</th></tr></thead>
@@ -793,6 +794,40 @@ function limparFiltrosDash(){
   renderDashboard();
 }
 
+// ── REORDENAR CARDS DO DASHBOARD (drag-and-drop) ────────────────────────────
+let dashDragKey=null;
+function dashDragStart(ev){
+  dashDragKey=ev.currentTarget.dataset.key;
+  ev.currentTarget.style.opacity='.4';
+  ev.dataTransfer.effectAllowed='move';
+}
+function dashDragOver(ev){
+  ev.preventDefault();
+  ev.currentTarget.style.outline='2px dashed #ffd700';
+}
+function dashDrop(ev){
+  ev.preventDefault();
+  const targetEl=ev.currentTarget;
+  targetEl.style.outline='';
+  const targetKey=targetEl.dataset.key;
+  if(!dashDragKey||dashDragKey===targetKey) return;
+
+  const grid=document.getElementById('stat-grid');
+  const cards=[...grid.children];
+  const keys=cards.map(c=>c.dataset.key);
+  const fromIdx=keys.indexOf(dashDragKey);
+  const toIdx=keys.indexOf(targetKey);
+  if(fromIdx===-1||toIdx===-1) return;
+
+  keys.splice(toIdx,0,keys.splice(fromIdx,1)[0]);
+  localStorage.setItem('mi_dash_card_order',JSON.stringify(keys));
+  renderDashboard();
+}
+function dashDragEnd(ev){
+  ev.currentTarget.style.opacity='';
+  document.querySelectorAll('#stat-grid .stat').forEach(el=>el.style.outline='');
+}
+
 function renderDashboard(){
   popularFiltrosDash();
 
@@ -827,8 +862,7 @@ function renderDashboard(){
     return acc+lucroReal(p);
   },0);
   const pv=salesFiltradas.flatMap(s=>(s.installments||[]).filter(i=>!i.pago&&isOverdue(i.vencimento))).length;
-  const d30=new Date(); d30.setDate(d30.getDate()-30);
-  const enc=prodsFiltrados.filter(p=>!isSoldOut(p)&&new Date((p.created_at||'2000-01-01')+'T12:00:00')<=d30);
+  const enc=prodsFiltrados.filter(p=>!isSoldOut(p));
   const ticket=salesFiltradas.length?fat/salesFiltradas.length:0;
   const comissoes=salesFiltradas.reduce((acc,s)=>{
     const p=products.find(x=>x.id===s.productId);
@@ -845,19 +879,34 @@ function renderDashboard(){
   const qtdVendida=salesFiltradas.reduce((acc,s)=>acc+(s.qty||1),0);
 
   if(!document.getElementById('stat-grid')) return;
-  document.getElementById('stat-grid').innerHTML=`
-    <div class="stat"><div class="stat-label">Faturamento total</div><div class="stat-val">${fmtBRL(fat)}</div><div class="stat-sub">${salesFiltradas.length} vendas</div></div>
-    <div class="stat"><div class="stat-label">Lucro estimado</div><div class="stat-val">${fmtBRL(lucro)}</div><div class="stat-sub">margem: ${fat?((lucro/fat)*100).toFixed(1):0}%</div></div>
-    <div class="stat info"><div class="stat-label">Estoque · valor venda</div><div class="stat-val" style="font-size:19px">${fmtBRL(valorEstoqueVenda)}</div><div class="stat-sub">${qtdEstoque} unidade${qtdEstoque!==1?'s':''} disponíve${qtdEstoque!==1?'is':'l'}</div></div>
-    <div class="stat info"><div class="stat-label">Estoque · valor custo</div><div class="stat-val" style="font-size:19px">${fmtBRL(valorEstoqueCusto)}</div><div class="stat-sub">capital investido em estoque</div></div>
-    <div class="stat"><div class="stat-label">Produtos vendidos</div><div class="stat-val">${qtdVendida}</div><div class="stat-sub">unidade${qtdVendida!==1?'s':''} em ${salesFiltradas.length} venda(s)</div></div>
-    <div class="stat info"><div class="stat-label">Ticket médio</div><div class="stat-val">${fmtBRL(ticket)}</div></div>
-    <div class="stat warn"><div class="stat-label">Comissões pagas</div><div class="stat-val">${fmtBRL(comissoes)}</div></div>
-    <div class="stat danger"><div class="stat-label">Parcelas vencidas</div><div class="stat-val">${pv}</div></div>
-    <div class="stat warn"><div class="stat-label">Em Estoque</div><div class="stat-val">${enc.length}</div></div>
-    <div class="stat"><div class="stat-label">Total de produtos</div><div class="stat-val">${prodsFiltrados.length}</div><div class="stat-sub">${prodsFiltrados.filter(p=>!isSoldOut(p)).length} disponíveis</div></div>
-    <div class="stat"><div class="stat-label">Importadores</div><div class="stat-val">${filtImp?1:importers.length}</div></div>
-  `;
+  // Cards do dashboard como array reordenável (key + html)
+  const statCards=[
+    {key:'faturamento', html:`<div class="stat-label">Faturamento total</div><div class="stat-val">${fmtBRL(fat)}</div><div class="stat-sub">${salesFiltradas.length} vendas</div>`, cls:''},
+    {key:'lucro', html:`<div class="stat-label">Lucro estimado</div><div class="stat-val">${fmtBRL(lucro)}</div><div class="stat-sub">margem: ${fat?((lucro/fat)*100).toFixed(1):0}%</div>`, cls:''},
+    {key:'estoque-venda', html:`<div class="stat-label">Estoque · valor venda</div><div class="stat-val" style="font-size:19px">${fmtBRL(valorEstoqueVenda)}</div><div class="stat-sub">${qtdEstoque} unidade${qtdEstoque!==1?'s':''} disponíve${qtdEstoque!==1?'is':'l'}</div>`, cls:'info'},
+    {key:'estoque-custo', html:`<div class="stat-label">Estoque · valor custo</div><div class="stat-val" style="font-size:19px">${fmtBRL(valorEstoqueCusto)}</div><div class="stat-sub">capital investido em estoque</div>`, cls:'info'},
+    {key:'produtos-vendidos', html:`<div class="stat-label">Produtos vendidos</div><div class="stat-val">${qtdVendida}</div><div class="stat-sub">unidade${qtdVendida!==1?'s':''} em ${salesFiltradas.length} venda(s)</div>`, cls:''},
+    {key:'ticket', html:`<div class="stat-label">Ticket médio</div><div class="stat-val">${fmtBRL(ticket)}</div>`, cls:'info'},
+    {key:'comissoes', html:`<div class="stat-label">Comissões pagas</div><div class="stat-val">${fmtBRL(comissoes)}</div>`, cls:'warn'},
+    {key:'parcelas-vencidas', html:`<div class="stat-label">Parcelas vencidas</div><div class="stat-val">${pv}</div>`, cls:'danger'},
+    {key:'em-estoque', html:`<div class="stat-label">Em Estoque</div><div class="stat-val">${enc.length}</div>`, cls:'warn'},
+    {key:'total-produtos', html:`<div class="stat-label">Total de produtos</div><div class="stat-val">${prodsFiltrados.length}</div><div class="stat-sub">${prodsFiltrados.filter(p=>!isSoldOut(p)).length} disponíveis</div>`, cls:''},
+    {key:'importadores', html:`<div class="stat-label">Importadores</div><div class="stat-val">${filtImp?1:importers.length}</div>`, cls:''},
+  ];
+
+  // Aplicar ordem salva (se existir)
+  const savedOrder=JSON.parse(localStorage.getItem('mi_dash_card_order')||'null');
+  let orderedCards=statCards;
+  if(savedOrder){
+    const map=Object.fromEntries(statCards.map(c=>[c.key,c]));
+    orderedCards=savedOrder.filter(k=>map[k]).map(k=>map[k]);
+    // Adiciona cards novos que não estavam salvos ainda
+    statCards.forEach(c=>{ if(!orderedCards.includes(c)) orderedCards.push(c); });
+  }
+
+  document.getElementById('stat-grid').innerHTML=orderedCards.map(c=>
+    `<div class="stat ${c.cls}" draggable="true" data-key="${c.key}" ondragstart="dashDragStart(event)" ondragover="dashDragOver(event)" ondrop="dashDrop(event)" ondragend="dashDragEnd(event)" style="cursor:grab">${c.html}</div>`
+  ).join('');
 
   // Gráfico vendas por mês
   const byMonth={};
@@ -1684,8 +1733,7 @@ function renderRelatorios(){
 
 // ── ENCALHADOS ────────────────────────────────────────────────────────────────
 function renderEncalhados(){
-  const d30=new Date(); d30.setDate(d30.getDate()-30);
-  const enc=products.filter(p=>!isSoldOut(p)&&new Date((p.created_at||'2000-01-01')+'T12:00:00')<=d30);
+  const enc=products.filter(p=>!isSoldOut(p)).sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||''));
 
   // Card de somatório
   const totalCusto=enc.reduce((acc,p)=>{
@@ -1696,13 +1744,13 @@ function renderEncalhados(){
   const totalVenda=enc.reduce((acc,p)=>acc+(p.preco*estoqueDisp(p)),0);
   const cardsEl=document.getElementById('enc-cards');
   if(cardsEl) cardsEl.innerHTML=`
-    <div class="stat"><div class="stat-label">Itens em estoque parado</div><div class="stat-val" style="font-size:19px">${enc.length}</div></div>
+    <div class="stat"><div class="stat-label">Itens em estoque</div><div class="stat-val" style="font-size:19px">${enc.length}</div></div>
     <div class="stat info"><div class="stat-label">Valor total · custo</div><div class="stat-val" style="font-size:19px">${fmtBRL(totalCusto)}</div></div>
     <div class="stat warn"><div class="stat-label">Valor total · venda</div><div class="stat-val" style="font-size:19px">${fmtBRL(totalVenda)}</div></div>
   `;
 
   const tbody=document.getElementById('enc-tbody');
-  if(!enc.length){ tbody.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-icon">🎉</div><p>Nenhum produto encalhado!</p></div></td></tr>'; return; }
+  if(!enc.length){ tbody.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-icon">📦</div><p>Nenhum produto em estoque.</p></div></td></tr>'; return; }
   tbody.innerHTML=enc.map(p=>{
     const dias=Math.floor((Date.now()-new Date((p.created_at||'2000-01-01')+'T12:00:00'))/86400000);
     const thumb=p.fotos?.[0]?`<img src="${p.fotos[0]}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;filter:grayscale(.5)">`:'—';
@@ -1713,7 +1761,7 @@ function renderEncalhados(){
       <td style="font-size:12px">${impName(p.importador)}</td>
       <td style="font-weight:700;color:var(--ac)">${fmtBRL(p.preco)}</td>
       <td>${p.qtd||1}</td>
-      <td><span class="chip ${dias>60?'chip-danger':'chip-warn'}">${dias} dias</span></td>
+      <td><span class="chip ${dias>60?'chip-danger':dias>30?'chip-warn':'chip-ok'}">${dias} dias</span></td>
     </tr>`;
   }).join('');
 }
